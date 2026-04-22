@@ -389,15 +389,27 @@ document.addEventListener('click',function(e){for(var i=0;i<6;i++)sparks.push({x
 
 // ── YouTube ────────────────────────────────────────────────
 var ytPlayer=null,ytReady=false,pendingId=null,currentYTUrl='';
+var ytFallbackIds=[],ytFallbackIdx=0;
 window.onYouTubeIframeAPIReady=function(){ytReady=true;if(pendingId)createPlayer(pendingId);};
 function createPlayer(id){
   if(ytPlayer){ytPlayer.loadVideoById(id);ytPlayer.pauseVideo();return;}
-  ytPlayer=new YT.Player('yt-player',{videoId:id,playerVars:{rel:0,modestbranding:1,playsinline:1},events:{onReady:function(e){e.target.pauseVideo();}}});
+  ytPlayer=new YT.Player('yt-player',{videoId:id,playerVars:{rel:0,modestbranding:1,playsinline:1},events:{
+    onReady:function(e){e.target.pauseVideo();},
+    onError:function(e){
+      // 100=not found, 101/150=embedding disabled — try next fallback silently
+      if((e.data===100||e.data===101||e.data===150)&&ytFallbackIdx<ytFallbackIds.length){
+        ytPlayer.loadVideoById(ytFallbackIds[ytFallbackIdx++]);
+      } else if(e.data===100||e.data===101||e.data===150){
+        setStatus('Video can\'t be embedded~ try pasting a different URL!','err');
+      }
+    }
+  }});
 }
 function extractId(s){s=s.trim();var pats=[/[?&]v=([A-Za-z0-9_-]{11})/,/youtu\.be\/([A-Za-z0-9_-]{11})/,/\/embed\/([A-Za-z0-9_-]{11})/,/\/shorts\/([A-Za-z0-9_-]{11})/,/^([A-Za-z0-9_-]{11})$/];for(var i=0;i<pats.length;i++){var m=s.match(pats[i]);if(m)return m[1];}return null;}
 function loadTrack(){
   var id=extractId(document.getElementById('yt-input').value);
   if(!id){setStatus('Could not find a YouTube video ID~','err');return;}
+  ytFallbackIds=[];ytFallbackIdx=0;
   currentYTUrl='https://www.youtube.com/watch?v='+id;
   document.getElementById('yt-wrap').style.display='block';
   document.getElementById('yt-tag').textContent=currentYTUrl;
@@ -808,20 +820,20 @@ function closeRatingOverlay(){clearTimeout(ratingTimer);document.getElementById(
 
 // ── Roulette ──────────────────────────────────────────────
 var ROULETTE_SONGS=[
-  {id:'oVbXpK_BRbw',title:'Bohemian Rhapsody',artist:'Queen'},
-  {id:'YRFNMAFL5j0',title:"Don't Stop Believin'",artist:'Journey'},
-  {id:'iaPF8wGYM7s',title:"Livin' on a Prayer",artist:'Bon Jovi'},
-  {id:'IM8pV2wedpc',title:'Sweet Caroline',artist:'Neil Diamond'},
-  {id:'7fCMws3U2zE',title:'Dancing Queen',artist:'ABBA'},
-  {id:'nKR0Vo3BFV8',title:'Mr. Brightside',artist:'The Killers'},
-  {id:'fuMN34FeSL4',title:"Don't Stop Me Now",artist:'Queen'},
-  {id:'XgK7VLKcCTo',title:'Shallow',artist:'Lady Gaga & Bradley Cooper'},
-  {id:'0BFeMQkYteo',title:'Wonderwall',artist:'Oasis'},
-  {id:'l7cJwvvWopk',title:'I Will Survive',artist:'Gloria Gaynor'},
-  {id:'HTXiC8g3F40',title:'Total Eclipse of the Heart',artist:'Bonnie Tyler'},
-  {id:'g-cvByECSlE',title:'Somebody That I Used to Know',artist:'Gotye & Kimbra'},
-  {id:'u-TsARZWbRk',title:'Uptown Funk',artist:'Mark Ronson ft. Bruno Mars'},
-  {id:'qtyFNZLaWBY',title:"Can't Stop the Feeling",artist:'Justin Timberlake'},
+  {ids:['oVbXpK_BRbw','yvEcMrstp80','dk5AWEfxg4s'],title:'Bohemian Rhapsody',artist:'Queen'},
+  {ids:['YRFNMAFL5j0','vGJT5F_5g9I','gzsSSqAN-jI'],title:"Don't Stop Believin'",artist:'Journey'},
+  {ids:['iaPF8wGYM7s','ADjx9HF5WoA','ZkIvNF2hnG8'],title:"Livin' on a Prayer",artist:'Bon Jovi'},
+  {ids:['IM8pV2wedpc','srLoAl1mhFw'],title:'Sweet Caroline',artist:'Neil Diamond'},
+  {ids:['7fCMws3U2zE','WHayJZ3eMcE'],title:'Dancing Queen',artist:'ABBA'},
+  {ids:['nKR0Vo3BFV8','NvZyU7ij_bs','s3_rkFk-7t4'],title:'Mr. Brightside',artist:'The Killers'},
+  {ids:['fuMN34FeSL4','5yebPm09eM0','G962z-4OL9E'],title:"Don't Stop Me Now",artist:'Queen'},
+  {ids:['XgK7VLKcCTo','smu-0V7E7wI','m8AY5h1uVQo'],title:'Shallow',artist:'Lady Gaga & Bradley Cooper'},
+  {ids:['0BFeMQkYteo','i3SeJ6-sr5o','R_EXyGWI9rU'],title:'Wonderwall',artist:'Oasis'},
+  {ids:['l7cJwvvWopk','FsUa8P-L2Ag','ehqhfZvaPNM'],title:'I Will Survive',artist:'Gloria Gaynor'},
+  {ids:['HTXiC8g3F40','pnJRZU4oAi8','iN7jQEpv92I'],title:'Total Eclipse of the Heart',artist:'Bonnie Tyler'},
+  {ids:['g-cvByECSlE','4Oci7DS-wRw','pBmtpaxU4HQ'],title:'Somebody That I Used to Know',artist:'Gotye & Kimbra'},
+  {ids:['u-TsARZWbRk','qWst8V-P9qw','F3R6eJKAz4M'],title:'Uptown Funk',artist:'Mark Ronson ft. Bruno Mars'},
+  {ids:['qtyFNZLaWBY','KrZ00lmS4rQ','UfXmiWycn6g'],title:"Can't Stop the Feeling",artist:'Justin Timberlake'},
 ];
 var rouletteResult=null;
 function openRoulette(){
@@ -842,8 +854,18 @@ function openRoulette(){
 }
 function loadRouletteResult(){
   if(!rouletteResult)return;
-  document.getElementById('yt-input').value='https://www.youtube.com/watch?v='+rouletteResult.id;
-  closeRoulette();loadTrack();
+  var ids=rouletteResult.ids;
+  ytFallbackIds=ids.slice(1);ytFallbackIdx=0;
+  var primaryId=ids[0],fullUrl='https://www.youtube.com/watch?v='+primaryId;
+  currentYTUrl=fullUrl;
+  document.getElementById('yt-input').value=fullUrl;
+  document.getElementById('yt-wrap').style.display='block';
+  document.getElementById('yt-tag').textContent=fullUrl;
+  updateGuide(fullUrl);
+  if(ytReady)createPlayer(primaryId);else pendingId=primaryId;
+  closeRoulette();
+  setStatus('Track loaded~ Hit Record to start!','ok');
+  if(socket&&socket.readyState===1){socket.send(JSON.stringify({type:'sync-video',url:fullUrl}));showSyncToast('\uD83C\uDF38 Synced song to the room~');}
 }
 function closeRoulette(){
   document.getElementById('roulette-overlay').classList.remove('show');
