@@ -361,7 +361,7 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
   <div class="guide" id="mix-guide" style="display:none">
     <div class="guide-title">&#127911; Need the backing track MP3?</div>
     <div class="guide-steps">
-      <div class="guide-step"><div class="step-bubble">1</div><span>Click a converter below to download the backing track MP3 &#128149;</span></div>
+      <div class="guide-step"><div class="step-bubble">1</div><span>Click below to open the download page &#128149;</span></div>
       <div class="guide-step"><div class="step-bubble">2</div><span>Upload it in Step 4 to mix everything together! &#11088;</span></div>
     </div>
     <div class="converter-links" id="converter-links"></div>
@@ -496,13 +496,13 @@ function loadTrack(){
 }
 document.getElementById('yt-input').addEventListener('keydown',function(e){if(e.key==='Enter')loadTrack();});
 
-var CONVERTERS=[
-  {name:'cobalt.tools',url:function(v){return'https://cobalt.tools/';}},
-  {name:'yt5s.io',url:function(v){return'https://yt5s.io/en68/?q='+encodeURIComponent(v);}},
-  {name:'mp3youtube.cc',url:function(v){return'https://mp3youtube.cc/?url='+encodeURIComponent(v);}},
-  {name:'loader.to',url:function(v){return'https://loader.to/api/button/?url='+encodeURIComponent(v)+'&f=mp3';}},
-];
-function updateGuide(ytUrl){var c=document.getElementById('converter-links');c.innerHTML='';CONVERTERS.forEach(function(cv){var a=document.createElement('a');a.href=cv.url(ytUrl);a.target='_blank';a.rel='noopener noreferrer';a.textContent=cv.name;c.appendChild(a);});document.getElementById('guide-url-note').textContent='Track: '+ytUrl;}
+function updateGuide(ytUrl){
+  var piUrl=ytUrl.replace('www.youtube.com','www.youtubepi.com');
+  var c=document.getElementById('converter-links');c.innerHTML='';
+  var a=document.createElement('a');a.href=piUrl;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Download on YouTubePi \uD83C\uDF1F';
+  c.appendChild(a);
+  document.getElementById('guide-url-note').textContent='Track: '+ytUrl;
+}
 
 // ── Mic + Reverb ──────────────────────────────────────────
 var audioCtx,analyser,recorder,reverbNode,dryGain,wetGain;
