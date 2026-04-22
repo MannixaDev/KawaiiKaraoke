@@ -422,7 +422,7 @@ function updateGuide(ytUrl){var c=document.getElementById('converter-links');c.i
 // ── Mic + Reverb ──────────────────────────────────────────
 var audioCtx,analyser,recorder,reverbNode,dryGain,wetGain;
 var autoProcNode,autotuneOutGain,pitchAnalyser;
-var autoRatio=1.0,autoWriteHead=0,autoReadHead=0,autoRingBuf=new Float32Array(8192);
+var autoRatio=1.0,autoWriteHead=0,autoReadHead=0,autoRingBuf=new Float32Array(65536);
 var chunks=[];
 
 async function initMic(){
@@ -452,10 +452,22 @@ async function initMic(){
     micSource.connect(autoProcNode);
     autoProcNode.onaudioprocess=function(ev){
       var inp=ev.inputBuffer.getChannelData(0),out=ev.outputBuffer.getChannelData(0);
-      for(var i=0;i<inp.length;i++){autoRingBuf[autoWriteHead]=inp[i];autoWriteHead=(autoWriteHead+1)%autoRingBuf.length;}
-      for(var i=0;i<out.length;i++){out[i]=autoRingBuf[Math.floor(autoReadHead)%autoRingBuf.length];autoReadHead=(autoReadHead+autoRatio+autoRingBuf.length)%autoRingBuf.length;}
+      var MASK=autoRingBuf.length-1; // 65535 — power-of-2 bitwise wrap
+      for(var i=0;i<inp.length;i++){autoRingBuf[autoWriteHead&MASK]=inp[i];autoWriteHead++;}
+      for(var i=0;i<out.length;i++){
+        var ri=autoReadHead|0,frac=autoReadHead-ri;
+        var a=autoRingBuf[ri&MASK],b=autoRingBuf[(ri+1)&MASK];
+        out[i]=a+(b-a)*frac; // linear interpolation — smoother pitch shift
+        autoReadHead+=autoRatio;
+      }
+      // De-drift: keep read pointer 64–512 samples behind write pointer
+      var lag=autoWriteHead-autoReadHead;
+      if(lag>512||lag<16)autoReadHead=autoWriteHead-128;
     };
     autoProcNode.connect(autotuneOutGain);autotuneOutGain.connect(dest);
+    // CRITICAL: ScriptProcessorNode only fires when connected to audioCtx.destination
+    var autoSink=audioCtx.createGain();autoSink.gain.value=0;
+    autoProcNode.connect(autoSink);autoSink.connect(audioCtx.destination);
     setInterval(detectAndUpdatePitch,80);
     document.getElementById('rec-btn').disabled=false;
     setStatus('Mic ready~ Hit Record to start!','ok');
