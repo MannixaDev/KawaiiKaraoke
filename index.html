@@ -152,6 +152,30 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
 .react-btn:active{transform:scale(0.9);}
 .rfloat{position:fixed;pointer-events:none;z-index:400;animation:rfloat 2.2s ease-out forwards;}
 @keyframes rfloat{0%{transform:translateY(0) scale(0.8);opacity:1}60%{opacity:1}100%{transform:translateY(-200px) scale(1.3);opacity:0}}
+/* Queue */
+.queue-empty{font-size:0.78rem;font-weight:700;color:var(--pink-l);text-align:center;padding:0.5rem 0;}
+.queue-item{display:flex;align-items:center;gap:0.6rem;background:linear-gradient(135deg,#fff5f9,#f9f0ff);border-radius:12px;padding:0.55rem 0.75rem;margin-bottom:0.4rem;border:2px solid var(--pink-ll);}
+.queue-pos{font-size:1rem;font-weight:900;color:var(--lavender);min-width:1.5rem;text-align:center;}
+.queue-info{flex:1;min-width:0;}
+.queue-song{font-size:0.75rem;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.queue-by{font-size:0.62rem;font-weight:700;color:var(--ink-l);}
+/* Ratings */
+#rating-overlay{display:none;position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--white);border:2px solid var(--pink-ll);border-radius:24px;padding:1.2rem 1.5rem;z-index:350;box-shadow:0 8px 32px var(--shadow);text-align:center;min-width:260px;}
+#rating-overlay.show{display:block;animation:pop 0.4s cubic-bezier(0.34,1.56,0.64,1);}
+.rating-title{font-size:0.85rem;font-weight:900;color:var(--ink);margin-bottom:0.75rem;}
+.star-row{display:flex;gap:0.3rem;justify-content:center;margin-bottom:0.75rem;}
+.star-btn{font-size:1.8rem;background:none;border:none;cursor:pointer;padding:0.1rem;transition:transform 0.15s;line-height:1;opacity:0.25;}
+.star-btn.lit{opacity:1;}
+.star-btn:hover{transform:scale(1.2);}
+/* Roulette */
+#roulette-overlay{display:none;position:fixed;inset:0;background:rgba(255,240,245,0.95);backdrop-filter:blur(8px);z-index:250;align-items:center;justify-content:center;flex-direction:column;}
+#roulette-overlay.show{display:flex;}
+.roulette-card{background:var(--white);border-radius:28px;padding:2rem 2.5rem;box-shadow:0 12px 48px var(--shadow);border:2px solid var(--pink-ll);text-align:center;max-width:340px;width:90%;}
+#roulette-emoji{font-size:5rem;display:block;margin-bottom:0.5rem;line-height:1.2;}
+#roulette-emoji.spinning{animation:spin-emoji 0.12s linear infinite;}
+@keyframes spin-emoji{to{transform:rotate(360deg)}}
+.roulette-result-title{font-size:1.1rem;font-weight:900;color:var(--ink);margin-bottom:0.25rem;}
+.roulette-result-artist{font-size:0.8rem;font-weight:700;color:var(--ink-l);margin-bottom:1.25rem;}
 </style>
 </head>
 <body>
@@ -203,6 +227,14 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
           <button class="react-btn" onclick="sendReaction('✨')">&#10024;</button>
         </div>
       </div>
+      <div style="margin-top:0.75rem;border-top:2px solid var(--pink-ll);padding-top:0.75rem;">
+        <div style="font-size:0.7rem;font-weight:800;color:var(--ink-l);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.5rem;">&#127926; Song Queue</div>
+        <div class="room-input-row" style="margin-bottom:0.5rem;">
+          <input type="text" id="queue-input" placeholder="Paste YouTube URL to suggest~" />
+          <button class="btn-pink" onclick="addToQueue()" style="white-space:nowrap;padding:0.65rem 0.9rem;">+&nbsp;Queue</button>
+        </div>
+        <div id="queue-list"><div class="queue-empty">Queue is empty~ suggest a song!</div></div>
+      </div>
     </div>
     <div id="room-status">Solo mode &#8212; create or join a room to sing together~ &#127800;</div>
   </div>
@@ -214,6 +246,7 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
       <input type="text" id="yt-input" placeholder="Paste YouTube URL here~" />
       <button class="btn-pink" onclick="loadTrack()">Load &#10024;</button>
     </div>
+    <button class="btn-ghost" onclick="openRoulette()" style="font-size:0.78rem;width:100%;margin-top:-0.1rem;">&#127922; Random Song Roulette</button>
     <div id="yt-wrap" style="display:none">
       <div class="yt-frame-wrap"><div id="yt-player"></div></div>
       <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem">
@@ -238,6 +271,7 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
         <button class="reverb-btn"        data-val="45" data-tip="Big stage energy ~ great for ballads and dramatic moments" onclick="pickReverb(this)">Stage &#127775;</button>
         <button class="reverb-btn"        data-val="70" data-tip="Dreamy and floaty ~ ethereal vibes for slower songs"      onclick="pickReverb(this)">Dreamy &#127744;</button>
         <button class="reverb-btn"        data-val="95" data-tip="Absolutely drenched ~ chaotic but iconic"                 onclick="pickReverb(this)">Wet af &#129397;</button>
+        <button class="reverb-btn"        data-val="robot" data-tip="Robotic ring-mod voice ~ T-Pain but make it kawaii"          onclick="pickReverb(this)">Robot &#129302;</button>
       </div>
     </div>
     <div id="reverb-tip" style="font-size:0.7rem;font-weight:700;color:var(--ink-l);margin-bottom:0.4rem;min-height:1.1em;">Bone dry ~ no reverb at all, raw and close-up</div>
@@ -307,6 +341,32 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
   </div>
 
 </main>
+<div id="rating-overlay">
+  <div class="rating-title" id="rating-title">&#11088; Rate the performance!</div>
+  <div class="star-row">
+    <button class="star-btn" onclick="setStars(1)">&#11088;</button>
+    <button class="star-btn" onclick="setStars(2)">&#11088;</button>
+    <button class="star-btn" onclick="setStars(3)">&#11088;</button>
+    <button class="star-btn" onclick="setStars(4)">&#11088;</button>
+    <button class="star-btn" onclick="setStars(5)">&#11088;</button>
+  </div>
+  <button class="btn-pink" id="rating-submit" onclick="submitRating()" disabled style="width:100%;font-size:0.8rem;">Submit &#10024;</button>
+</div>
+<div id="roulette-overlay">
+  <div class="roulette-card">
+    <span id="roulette-emoji">&#127922;</span>
+    <div id="roulette-result-box" style="display:none">
+      <div class="roulette-result-title" id="roulette-result-title"></div>
+      <div class="roulette-result-artist" id="roulette-result-artist"></div>
+      <div style="display:flex;gap:0.6rem;justify-content:center;">
+        <button class="btn-pink" onclick="loadRouletteResult()">Load This Song &#10024;</button>
+        <button class="btn-ghost" onclick="openRoulette()">Spin Again &#127922;</button>
+      </div>
+    </div>
+    <div id="roulette-spin-hint" style="font-size:0.85rem;font-weight:700;color:var(--ink-l);margin-top:0.5rem;">Spinning&#8230;</div>
+    <button class="btn-ghost" onclick="closeRoulette()" style="margin-top:1rem;font-size:0.75rem;">Cancel</button>
+  </div>
+</div>
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
 // ── Petals ────────────────────────────────────────────────
@@ -355,7 +415,7 @@ var CONVERTERS=[
 function updateGuide(ytUrl){var c=document.getElementById('converter-links');c.innerHTML='';CONVERTERS.forEach(function(cv){var a=document.createElement('a');a.href=cv.url(ytUrl);a.target='_blank';a.rel='noopener noreferrer';a.textContent=cv.name;c.appendChild(a);});document.getElementById('guide-url-note').textContent='Track: '+ytUrl;}
 
 // ── Mic + Reverb ──────────────────────────────────────────
-var audioCtx,analyser,recorder,reverbNode,dryGain,wetGain;
+var audioCtx,analyser,recorder,reverbNode,dryGain,wetGain,ringOsc,ringGainNode,robotOutGain;
 var chunks=[];
 
 async function initMic(){
@@ -378,6 +438,12 @@ async function initMic(){
     recorder=new MediaRecorder(dest.stream);
     recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data);};
     recorder.onstop=finaliseTake;
+    ringOsc=audioCtx.createOscillator();ringOsc.type='sine';ringOsc.frequency.value=220;
+    ringGainNode=audioCtx.createGain();ringGainNode.gain.value=0;
+    robotOutGain=audioCtx.createGain();robotOutGain.gain.value=0;
+    ringOsc.connect(ringGainNode.gain);
+    micSource.connect(ringGainNode);ringGainNode.connect(robotOutGain);robotOutGain.connect(dest);
+    ringOsc.start();
     document.getElementById('rec-btn').disabled=false;
     setStatus('Mic ready~ Hit Record to start!','ok');
   }catch(e){setStatus('Could not access mic~ Check permissions!','err');}
@@ -394,8 +460,15 @@ function setReverbWet(val){if(!wetGain||!dryGain)return;var w=val/100;wetGain.ga
 function pickReverb(btn){
   document.querySelectorAll('.reverb-btn').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
-  setReverbWet(parseInt(btn.dataset.val));
   document.getElementById('reverb-tip').textContent=btn.dataset.tip;
+  if(btn.dataset.val==='robot'){
+    if(dryGain)dryGain.gain.value=0.05;
+    if(wetGain)wetGain.gain.value=0;
+    if(robotOutGain)robotOutGain.gain.value=1;
+  }else{
+    if(robotOutGain)robotOutGain.gain.value=0;
+    setReverbWet(parseInt(btn.dataset.val));
+  }
 }
 
 function runMeter(){
@@ -434,6 +507,7 @@ function startRec(){
 
 function stopRec(){
   if(socket&&socket.readyState===1&&isHost)socket.send(JSON.stringify({type:'sync-stop'}));
+  if(socket&&socket.readyState===1)socket.send(JSON.stringify({type:'rate-start',singer:document.getElementById('local-nick').value.trim()||'Superstar'}));
   recorder.stop();isRecording=false;clearInterval(timerInt);
   if(ytPlayer&&typeof ytPlayer.pauseVideo==='function')ytPlayer.pauseVideo();
   document.querySelectorAll('.reverb-btn').forEach(function(b){b.disabled=false;});
@@ -503,9 +577,15 @@ async function connectToRoom(code){
       if(isHost&&currentYTUrl&&socket&&socket.readyState===1)socket.send(JSON.stringify({type:'sync-video',url:currentYTUrl}));
       var myNick=document.getElementById('local-nick').value.trim()||'Superstar';
       socket.send(JSON.stringify({type:'nick',name:myNick}));
+      if(isHost&&songQueue.length)socket.send(JSON.stringify({type:'queue-sync',queue:songQueue}));
     }
     if(msg.type==='nick'){peerNicks[msg.from]=msg.name;updateBubbleNick(msg.from,msg.name);}
     if(msg.type==='reaction')showReactionBurst(msg.emoji);
+    if(msg.type==='queue-add')applyQueueAdd(msg.url,msg.by);
+    if(msg.type==='queue-skip')applyQueueSkip();
+    if(msg.type==='queue-sync'){songQueue=msg.queue||[];renderQueue();}
+    if(msg.type==='rate-start')showRatingOverlay(msg.singer);
+    if(msg.type==='rate-vote'){var st='';for(var si=0;si<msg.stars;si++)st+='\u2B50';showSyncToast(msg.voter+' rated: '+st);}
     if(msg.type==='peer-left'){removePeerBubble(msg.id);if(peers[msg.id]){peers[msg.id].pc.close();delete peers[msg.id];}setRoomStatus('Someone left the room~','');}
     if(msg.type==='sync-start'&&!isHost)startCountdown();
     if(msg.type==='sync-stop'&&!isHost&&isRecording)stopRec();
@@ -629,6 +709,105 @@ function audioBufferToWav(buffer){
   v.setUint16(22,numCh,true);v.setUint32(24,sr,true);v.setUint32(28,sr*numCh*2,true);v.setUint16(32,numCh*2,true);
   v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,ds,true);
   return new Blob([hdr,samples.buffer],{type:'audio/wav'});
+}
+
+// ── Song Queue ────────────────────────────────────────────
+var songQueue=[];
+function addToQueue(){
+  var url=document.getElementById('queue-input').value.trim();
+  var id=extractId(url);
+  if(!id){setRoomStatus('Not a valid YouTube URL~','err');return;}
+  var myNick=document.getElementById('local-nick').value.trim()||'Superstar';
+  var fullUrl='https://www.youtube.com/watch?v='+id;
+  applyQueueAdd(fullUrl,myNick);
+  if(socket&&socket.readyState===1)socket.send(JSON.stringify({type:'queue-add',url:fullUrl,by:myNick}));
+  document.getElementById('queue-input').value='';
+}
+function applyQueueAdd(url,by){
+  songQueue.push({url:url,by:by});renderQueue();
+  showSyncToast('\uD83C\uDFB5 '+by+' added a song~');
+}
+function applyQueueSkip(){
+  songQueue.shift();
+  if(songQueue.length>0){var next=songQueue[0];document.getElementById('yt-input').value=next.url;loadTrack();showSyncToast('\u23ED Coming up: '+next.by+'\'s pick~');}
+  renderQueue();
+}
+function renderQueue(){
+  var list=document.getElementById('queue-list');if(!list)return;
+  if(!songQueue.length){list.innerHTML='<div class="queue-empty">Queue is empty~ suggest a song!</div>';return;}
+  list.innerHTML='';
+  songQueue.forEach(function(item,i){
+    var el=document.createElement('div');el.className='queue-item';
+    var short='youtu.be/'+item.url.replace('https://www.youtube.com/watch?v=','');
+    el.innerHTML='<div class="queue-pos">'+(i===0?'\u25B6':(i+1))+'</div><div class="queue-info"><div class="queue-song">'+short+'</div><div class="queue-by">by '+item.by+'</div></div>';
+    if(i===0&&isHost){var sb=document.createElement('button');sb.className='btn-ghost';sb.style.cssText='font-size:0.65rem;padding:0.3rem 0.55rem;flex-shrink:0;';sb.textContent='\u23ED Skip';sb.onclick=function(){applyQueueSkip();if(socket&&socket.readyState===1)socket.send(JSON.stringify({type:'queue-skip'}));};el.appendChild(sb);}
+    list.appendChild(el);
+  });
+}
+
+// ── Ratings ───────────────────────────────────────────────
+var myRating=0,ratingTimer=null;
+function showRatingOverlay(singer){
+  var myNick=document.getElementById('local-nick').value.trim()||'Superstar';
+  if(!singer||singer===myNick)return;
+  myRating=0;updateStars(0);
+  document.getElementById('rating-title').textContent='\u2B50 Rate '+singer+'\'s performance!';
+  document.getElementById('rating-submit').disabled=true;
+  document.getElementById('rating-overlay').classList.add('show');
+  clearTimeout(ratingTimer);ratingTimer=setTimeout(closeRatingOverlay,14000);
+}
+function setStars(n){myRating=n;updateStars(n);document.getElementById('rating-submit').disabled=false;}
+function updateStars(n){document.querySelectorAll('.star-btn').forEach(function(b,i){b.classList.toggle('lit',i<n);});}
+function submitRating(){
+  if(!myRating||!(socket&&socket.readyState===1))return;
+  var voter=document.getElementById('local-nick').value.trim()||'Someone';
+  socket.send(JSON.stringify({type:'rate-vote',stars:myRating,voter:voter}));
+  closeRatingOverlay();
+}
+function closeRatingOverlay(){clearTimeout(ratingTimer);document.getElementById('rating-overlay').classList.remove('show');}
+
+// ── Roulette ──────────────────────────────────────────────
+var ROULETTE_SONGS=[
+  {id:'9Lxm0iSnKNc',title:'Bohemian Rhapsody',artist:'Queen'},
+  {id:'c8wn2fMYvns',title:"Don't Stop Believin'",artist:'Journey'},
+  {id:'ZkIvNF2hnG8',title:"Livin' on a Prayer",artist:'Bon Jovi'},
+  {id:'srLoAl1mhFw',title:'Sweet Caroline',artist:'Neil Diamond'},
+  {id:'WHayJZ3eMcE',title:'Dancing Queen',artist:'ABBA'},
+  {id:'c1X3Lg7RVkk',title:'Mr. Brightside',artist:'The Killers'},
+  {id:'G962z-4OL9E',title:"Don't Stop Me Now",artist:'Queen'},
+  {id:'_nHT_k9Rswc',title:'Shallow',artist:'Lady Gaga & Bradley Cooper'},
+  {id:'R_EXyGWI9rU',title:'Wonderwall',artist:'Oasis'},
+  {id:'FsUa8P-L2Ag',title:'I Will Survive',artist:'Gloria Gaynor'},
+  {id:'pnJRZU4oAi8',title:'Total Eclipse of the Heart',artist:'Bonnie Tyler'},
+  {id:'toHUpXZRgTQ',title:'Somebody That I Used to Know',artist:'Gotye & Kimbra'},
+  {id:'F3R6eJKAz4M',title:'Uptown Funk',artist:'Mark Ronson ft. Bruno Mars'},
+  {id:'KrZ00lmS4rQ',title:"Can't Stop the Feeling",artist:'Justin Timberlake'},
+];
+var rouletteResult=null;
+function openRoulette(){
+  document.getElementById('roulette-overlay').classList.add('show');
+  document.getElementById('roulette-result-box').style.display='none';
+  document.getElementById('roulette-spin-hint').style.display='block';
+  var em=document.getElementById('roulette-emoji');em.textContent='\uD83C\uDFA4';em.classList.add('spinning');
+  rouletteResult=null;
+  setTimeout(function(){
+    em.classList.remove('spinning');
+    rouletteResult=ROULETTE_SONGS[Math.floor(Math.random()*ROULETTE_SONGS.length)];
+    em.textContent='\uD83C\uDFB5';
+    document.getElementById('roulette-result-title').textContent=rouletteResult.title;
+    document.getElementById('roulette-result-artist').textContent=rouletteResult.artist;
+    document.getElementById('roulette-result-box').style.display='block';
+    document.getElementById('roulette-spin-hint').style.display='none';
+  },1800+Math.random()*1400);
+}
+function loadRouletteResult(){
+  if(!rouletteResult)return;
+  document.getElementById('yt-input').value='https://www.youtube.com/watch?v='+rouletteResult.id;
+  closeRoulette();loadTrack();
+}
+function closeRoulette(){
+  document.getElementById('roulette-overlay').classList.remove('show');
+  var em=document.getElementById('roulette-emoji');if(em)em.classList.remove('spinning');
 }
 
 initMic();
