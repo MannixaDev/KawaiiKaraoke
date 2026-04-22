@@ -459,13 +459,17 @@ var ytPlayer=null,ytReady=false,pendingId=null,currentYTUrl='';
 var ytFallbackIds=[],ytFallbackIdx=0;
 window.onYouTubeIframeAPIReady=function(){ytReady=true;if(pendingId)createPlayer(pendingId);};
 function createPlayer(id){
-  if(ytPlayer){ytPlayer.cueVideoById(id);return;}
-  ytPlayer=new YT.Player('yt-player',{videoId:id,playerVars:{rel:0,modestbranding:1,playsinline:1,autoplay:0},events:{
-    onReady:function(e){e.target.cueVideoById(id);},
+  if(ytPlayer){ytPlayer.loadVideoById(id);return;}
+  ytPlayer=new YT.Player('yt-player',{videoId:id,playerVars:{rel:0,modestbranding:1,playsinline:1,autoplay:1},events:{
+    onReady:function(e){e.target.loadVideoById(id);},
+    onStateChange:function(e){
+      // Pause as soon as first frame appears (unless we're recording)
+      if(e.data===YT.PlayerState.PLAYING&&!isRecording)ytPlayer.pauseVideo();
+    },
     onError:function(e){
       // 100=not found, 101/150=embedding disabled — try next fallback silently
       if((e.data===100||e.data===101||e.data===150)&&ytFallbackIdx<ytFallbackIds.length){
-        ytPlayer.cueVideoById(ytFallbackIds[ytFallbackIdx++]);
+        ytPlayer.loadVideoById(ytFallbackIds[ytFallbackIdx++]);
       } else if(e.data===100||e.data===101||e.data===150){
         setStatus('Video can\'t be embedded~ try pasting a different URL!','err');
       }
@@ -501,6 +505,7 @@ function updateGuide(ytUrl){var c=document.getElementById('converter-links');c.i
 // ── Mic + Reverb ──────────────────────────────────────────
 var audioCtx,analyser,recorder,reverbNode,dryGain,wetGain;
 var autoProcNode,autotuneOutGain,pitchAnalyser;
+var tuneOsc,tuneOsc2,tuneOscGain,tuneOscMaster,autotuneOn=false;
 var autoRatio=1.0,autoWriteHead=0,autoReadHead=0,autoRingBuf=new Float32Array(65536);
 var chunks=[];
 
@@ -547,6 +552,14 @@ async function initMic(){
     // CRITICAL: ScriptProcessorNode only fires when connected to audioCtx.destination
     var autoSink=audioCtx.createGain();autoSink.gain.value=0;
     autoProcNode.connect(autoSink);autoSink.connect(audioCtx.destination);
+    // T-Pain oscillator: sawtooth + square slightly detuned, amplitude envelope tracks voice
+    tuneOsc=audioCtx.createOscillator();tuneOsc.type='sawtooth';tuneOsc.frequency.value=220;
+    tuneOsc2=audioCtx.createOscillator();tuneOsc2.type='square';tuneOsc2.frequency.value=220;tuneOsc2.detune.value=12;
+    tuneOscGain=audioCtx.createGain();tuneOscGain.gain.value=0;
+    tuneOscMaster=audioCtx.createGain();tuneOscMaster.gain.value=0;
+    tuneOsc.connect(tuneOscGain);tuneOsc2.connect(tuneOscGain);
+    tuneOscGain.connect(tuneOscMaster);tuneOscMaster.connect(dest);
+    tuneOsc.start();tuneOsc2.start();
     setInterval(detectAndUpdatePitch,80);
     document.getElementById('rec-btn').disabled=false;
     setStatus('Mic ready~ Hit Record to start!','ok');
@@ -566,18 +579,27 @@ function pickReverb(btn){
   btn.classList.add('active');
   document.getElementById('reverb-tip').textContent=btn.dataset.tip;
   if(btn.dataset.val==='autotune'){
-    if(dryGain)dryGain.gain.value=0;
+    autotuneOn=true;
+    if(dryGain)dryGain.gain.value=0.12;   // small dry mix keeps it human
     if(wetGain)wetGain.gain.value=0;
-    if(autotuneOutGain)autotuneOutGain.gain.value=1;
+    if(autotuneOutGain)autotuneOutGain.gain.value=0.5; // ring buffer pitch-shift
+    if(tuneOscMaster)tuneOscMaster.gain.value=1;       // T-Pain oscillator buzz
   }else{
+    autotuneOn=false;
     if(autotuneOutGain)autotuneOutGain.gain.value=0;
+    if(tuneOscMaster)tuneOscMaster.gain.value=0;
+    if(tuneOscGain)tuneOscGain.gain.value=0;
     setReverbWet(parseInt(btn.dataset.val));
   }
 }
 
 function detectAndUpdatePitch(){
-  if(!pitchAnalyser||!autotuneOutGain||autotuneOutGain.gain.value===0)return;
+  if(!pitchAnalyser||!autotuneOn)return;
   var buf=new Float32Array(1024);pitchAnalyser.getFloatTimeDomainData(buf);
+  // RMS amplitude for envelope follower
+  var rms=0;for(var i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
+  // Silence gate — fade oscillator out when no voice
+  if(rms<0.006){if(tuneOscGain)tuneOscGain.gain.value*=0.88;return;}
   var sr=audioCtx.sampleRate,best=-1,bestLag=40;
   for(var lag=40;lag<500;lag++){var s=0;for(var i=0;i<buf.length-lag;i++)s+=buf[i]*buf[i+lag];if(s>best){best=s;bestLag=lag;}}
   if(best<0.005)return;
@@ -585,7 +607,12 @@ function detectAndUpdatePitch(){
   if(f<80||f>1000)return;
   var semitones=Math.round(12*Math.log2(f/440));
   var target=440*Math.pow(2,semitones/12);
-  autoRatio=0.7*autoRatio+0.3*(target/f);
+  // Fast convergence — snap to nearest semitone quickly (T-Pain hard correction)
+  autoRatio=0.15*autoRatio+0.85*(target/f);
+  // Drive oscillator to snapped pitch
+  if(tuneOsc){tuneOsc.frequency.value=target;tuneOsc2.frequency.value=target;}
+  // Amplitude envelope — oscillator follows voice loudness
+  if(tuneOscGain)tuneOscGain.gain.value=Math.min(1.4,rms*7);
 }
 
 function runMeter(){
