@@ -167,6 +167,24 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
 .star-btn{font-size:1.8rem;background:none;border:none;cursor:pointer;padding:0.1rem;transition:transform 0.15s;line-height:1;opacity:0.25;}
 .star-btn.lit{opacity:1;}
 .star-btn:hover{transform:scale(1.2);}
+/* Transpose */
+.transpose-row{display:none;align-items:center;gap:0.75rem;justify-content:center;margin-top:0.75rem;padding-top:0.6rem;border-top:2px solid var(--pink-ll);}
+.transpose-display{font-weight:900;font-size:0.82rem;color:var(--ink);background:var(--pink-bg);border:2px solid var(--pink-ll);border-radius:50px;padding:0.35rem 1rem;min-width:10rem;text-align:center;transition:background 0.2s;}
+.transpose-display.shifted{background:var(--lav-l);border-color:var(--lavender);}
+.transpose-btn{background:var(--pink-bg);color:var(--pink);border:2px solid var(--pink-ll);border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:900;line-height:1;flex-shrink:0;cursor:pointer;transition:all 0.15s;}
+.transpose-btn:hover{background:var(--pink);color:#fff;border-color:var(--pink);transform:scale(1.12);}
+/* Pitch display */
+#pitch-display{display:none;text-align:center;margin-top:0.5rem;}
+.pitch-pill{display:inline-flex;align-items:center;gap:0.5rem;background:linear-gradient(135deg,var(--lavender),var(--pink-l));color:#fff;font-weight:900;font-size:1.05rem;border-radius:50px;padding:0.3rem 1.1rem;min-width:6rem;justify-content:center;box-shadow:0 4px 14px rgba(200,164,248,0.4);}
+.pitch-pill-label{font-size:0.6rem;font-weight:800;opacity:0.85;letter-spacing:0.1em;text-transform:uppercase;}
+/* Crowd FX */
+.fx-section{margin-top:0.75rem;padding-top:0.75rem;border-top:2px solid var(--pink-ll);}
+.fx-row{display:flex;gap:0.45rem;flex-wrap:wrap;justify-content:center;}
+.fx-btn{background:var(--pink-bg);border:2px solid var(--pink-ll);border-radius:50px;padding:0.42rem 0.85rem;font-size:0.78rem;font-weight:800;color:var(--ink);cursor:pointer;transition:all 0.15s;font-family:'Nunito',sans-serif;}
+.fx-btn:hover{background:var(--lavender);color:#fff;border-color:var(--lavender);transform:translateY(-2px) scale(1.05);}
+.fx-btn:active{transform:scale(0.95);}
+/* Rejoin */
+#rejoin-row{margin-bottom:0.5rem;}
 /* Roulette */
 #roulette-overlay{display:none;position:fixed;inset:0;background:rgba(255,240,245,0.95);backdrop-filter:blur(8px);z-index:250;align-items:center;justify-content:center;flex-direction:column;}
 #roulette-overlay.show{display:flex;}
@@ -267,6 +285,9 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
       <span style="font-size:0.72rem;font-weight:800;color:var(--ink-l);white-space:nowrap;">Your name</span>
       <input type="text" id="local-nick" placeholder="Superstar~" maxlength="16" />
     </div>
+    <div id="rejoin-row" style="display:none">
+      <button class="btn-ghost" onclick="rejoinRoom()" style="width:100%;font-size:0.78rem;margin-bottom:0.5rem;">&#8617;&#65039; Rejoin <span id="rejoin-code"></span></button>
+    </div>
     <div class="room-mode-row">
       <button class="btn-pink" onclick="createRoom()">&#127968; Create Room</button>
       <button class="btn-lav" onclick="showJoin()">&#128279; Join Room</button>
@@ -320,6 +341,11 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
         <div class="yt-tag" id="yt-tag"></div>
         <span class="sync-badge">&#9654; Record button starts the video in sync!</span>
       </div>
+      <div class="transpose-row" id="transpose-row">
+        <button class="transpose-btn" onclick="shiftKey(-1)">&#8722;</button>
+        <div class="transpose-display" id="transpose-display">&#9836; Original Key</div>
+        <button class="transpose-btn" onclick="shiftKey(+1)">&#43;</button>
+      </div>
     </div>
   </div>
 
@@ -329,6 +355,7 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
     <div class="meter-section">
       <div class="meter-label">&#127897; Mic Level</div>
       <div class="meter-track"><div class="meter-fill" id="meter-fill"></div></div>
+      <div id="pitch-display"><div class="pitch-pill"><span class="pitch-pill-label">Note</span><span id="pitch-note">&#8211;</span></div></div>
     </div>
     <div style="margin-bottom:0.5rem">
       <div class="meter-label" style="margin-bottom:0.6rem">&#10024; Reverb</div>
@@ -349,6 +376,15 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
       <div class="timer" id="timer">0:00</div>
     </div>
     <div id="rec-status">Waiting for mic permission~</div>
+    <div class="fx-section">
+      <div class="meter-label" style="text-align:center;margin-bottom:0.5rem;">&#127881; Crowd FX</div>
+      <div class="fx-row">
+        <button class="fx-btn" onclick="playCrowdNoise('applause')">&#128079; Applause</button>
+        <button class="fx-btn" onclick="playCrowdNoise('cheer')">&#127881; Cheer!</button>
+        <button class="fx-btn" onclick="playCrowdNoise('boo')">&#128530; Boo</button>
+        <button class="fx-btn" onclick="playCrowdNoise('airhorn')">&#128226; Air Horn</button>
+      </div>
+    </div>
   </div>
 
   <!-- Step 3 -->
@@ -456,6 +492,53 @@ document.addEventListener('click',function(e){for(var i=0;i<6;i++)sparks.push({x
 
 // ── YouTube ────────────────────────────────────────────────
 var ytPlayer=null,ytReady=false,pendingId=null,currentYTUrl='';
+var transposeSteps=0;
+function shiftKey(dir){
+  transposeSteps=Math.max(-6,Math.min(6,transposeSteps+dir));
+  var rate=Math.pow(2,transposeSteps/12);
+  if(ytPlayer&&ytPlayer.setPlaybackRate)ytPlayer.setPlaybackRate(rate);
+  var d=document.getElementById('transpose-display');
+  if(transposeSteps===0){d.textContent='\u266C Original Key';d.classList.remove('shifted');}
+  else{d.textContent=(transposeSteps>0?'\u25B2 +':'\u25BC ')+Math.abs(transposeSteps)+' semitone'+(Math.abs(transposeSteps)===1?'':'s');d.classList.add('shifted');}
+}
+function resetTranspose(){
+  transposeSteps=0;
+  var d=document.getElementById('transpose-display');
+  if(d){d.textContent='\u266C Original Key';d.classList.remove('shifted');}
+  if(ytPlayer&&ytPlayer.setPlaybackRate)ytPlayer.setPlaybackRate(1);
+}
+
+function playCrowdNoise(type){
+  var ctx=new(window.AudioContext||window.webkitAudioContext)();
+  var sr=ctx.sampleRate,now=ctx.currentTime;
+  if(type==='applause'||type==='cheer'){
+    var dur=type==='cheer'?2:3;
+    var buf=ctx.createBuffer(1,sr*dur,sr);var d=buf.getChannelData(0);
+    for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    var src=ctx.createBufferSource();src.buffer=buf;
+    var lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=type==='cheer'?5000:3500;
+    var hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=type==='cheer'?600:250;
+    var g=ctx.createGain();
+    if(type==='cheer'){g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.55,now+0.08);g.gain.setValueAtTime(0.45,now+0.7);g.gain.linearRampToValueAtTime(0,now+dur);}
+    else{g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.38,now+0.4);g.gain.setValueAtTime(0.38,now+2.2);g.gain.linearRampToValueAtTime(0,now+dur);}
+    src.connect(hp);hp.connect(lp);lp.connect(g);g.connect(ctx.destination);
+    src.start();src.stop(now+dur);
+  } else if(type==='boo'){
+    var dur=2;var buf=ctx.createBuffer(1,sr*dur,sr);var d=buf.getChannelData(0);
+    for(var i=0;i<d.length;i++)d[i]=Math.random()*2-1;
+    var src=ctx.createBufferSource();src.buffer=buf;
+    var lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=500;
+    var g=ctx.createGain();g.gain.setValueAtTime(0,now);g.gain.linearRampToValueAtTime(0.45,now+0.25);g.gain.linearRampToValueAtTime(0,now+dur);
+    src.connect(lp);lp.connect(g);g.connect(ctx.destination);src.start();src.stop(now+dur);
+  } else if(type==='airhorn'){
+    var osc=ctx.createOscillator();osc.type='sawtooth';osc.frequency.value=185;
+    var osc2=ctx.createOscillator();osc2.type='square';osc2.frequency.value=370;
+    var lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=1800;
+    var g=ctx.createGain();g.gain.setValueAtTime(0.5,now);g.gain.setValueAtTime(0.5,now+0.5);g.gain.linearRampToValueAtTime(0,now+0.65);
+    osc.connect(lp);osc2.connect(lp);lp.connect(g);g.connect(ctx.destination);
+    osc.start();osc2.start();osc.stop(now+0.7);osc2.stop(now+0.7);
+  }
+}
 var ytFallbackIds=[],ytFallbackIdx=0;
 window.onYouTubeIframeAPIReady=function(){ytReady=true;if(pendingId)createPlayer(pendingId);};
 function createPlayer(id){
@@ -485,6 +568,8 @@ function loadTrack(){
   ytFallbackIds=[];ytFallbackIdx=0;
   currentYTUrl='https://www.youtube.com/watch?v='+id;
   document.getElementById('yt-wrap').style.display='block';
+  document.getElementById('transpose-row').style.display='flex';
+  resetTranspose();
   document.getElementById('yt-tag').textContent=currentYTUrl;
   updateGuide(currentYTUrl);
   if(ytReady)createPlayer(id);else pendingId=id;
@@ -588,21 +673,26 @@ function pickReverb(btn){
   }
 }
 
+var NOTE_NAMES=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 function detectAndUpdatePitch(){
-  if(!pitchAnalyser||!autotuneOn)return;
+  if(!pitchAnalyser)return;
   var buf=new Float32Array(2048);pitchAnalyser.getFloatTimeDomainData(buf);
-  // Silence gate — skip if signal too quiet
   var rms=0;for(var i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
-  if(rms<0.008)return;
+  var pd=document.getElementById('pitch-display');
+  if(rms<0.008){if(pd)pd.style.display='none';return;}
   var sr=audioCtx.sampleRate,best=-1,bestLag=40;
-  // Autocorrelation over larger buffer for more accurate pitch detection
   for(var lag=40;lag<600;lag++){var s=0;for(var i=0;i<600;i++)s+=buf[i]*buf[i+lag];if(s>best){best=s;bestLag=lag;}}
-  if(best<0.01)return;
+  if(best<0.01){if(pd)pd.style.display='none';return;}
   var f=sr/bestLag;
-  if(f<80||f>1000)return;
+  if(f<80||f>1000){if(pd)pd.style.display='none';return;}
   var semitones=Math.round(12*Math.log2(f/440));
+  // Show note name in pitch display
+  var ni=((semitones%12)+12)%12;
+  var octave=Math.floor(Math.log2(f/16.352));
+  var pn=document.getElementById('pitch-note');
+  if(pd&&pn){pd.style.display='block';pn.textContent=NOTE_NAMES[ni]+octave;}
+  if(!autotuneOn)return;
   var target=440*Math.pow(2,semitones/12);
-  // Instant snap — ratio converges hard to target (the T-Pain "hard retune" sound)
   autoRatio=0.05*autoRatio+0.95*(target/f);
 }
 
@@ -695,6 +785,7 @@ async function connectToRoom(code){
     document.getElementById('room-code-display').textContent=code;
     document.getElementById('reactions-panel').classList.add('show');
     setRoomStatus(isHost?'Room created! Share the code~ \uD83C\uDF38':'Joined! \uD83C\uDF89','ok');
+    try{localStorage.setItem('kwk-last-room',code);}catch(e){}
     var myNick=document.getElementById('local-nick').value.trim()||'Superstar';
     addPeerBubble('you',myNick+' \uD83D\uDC4B',true);
     socket.send(JSON.stringify({type:'nick',name:myNick}));
@@ -945,6 +1036,8 @@ function loadRouletteResult(){
   currentYTUrl=fullUrl;
   document.getElementById('yt-input').value=fullUrl;
   document.getElementById('yt-wrap').style.display='block';
+  document.getElementById('transpose-row').style.display='flex';
+  resetTranspose();
   document.getElementById('yt-tag').textContent=fullUrl;
   updateGuide(fullUrl);
   if(ytReady)createPlayer(primaryId);else pendingId=primaryId;
@@ -957,8 +1050,23 @@ function closeRoulette(){
   var em=document.getElementById('roulette-emoji');if(em)em.classList.remove('spinning');
 }
 
+function rejoinRoom(){
+  try{var code=localStorage.getItem('kwk-last-room');if(code){document.getElementById('join-code').value=code;document.getElementById('join-row').style.display='block';joinRoom();}}catch(e){}
+}
+
 initMic();
+// Auto-join from URL param
 (function(){var p=new URLSearchParams(location.search).get('room');if(p){var c=p.toUpperCase().substring(0,4);document.getElementById('join-code').value=c;document.getElementById('join-row').style.display='block';setTimeout(function(){joinRoom();},400);}})();
+// Show rejoin button if a previous room is remembered
+(function(){
+  try{
+    var last=localStorage.getItem('kwk-last-room');
+    if(last){
+      document.getElementById('rejoin-code').textContent=last;
+      document.getElementById('rejoin-row').style.display='block';
+    }
+  }catch(e){}
+})();
 </script>
 </body>
 </html>
