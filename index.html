@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kawaii Karaoke</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--pink:#ff8fab;--pink-l:#ffb3c6;--pink-ll:#ffd6e0;--pink-bg:#fff0f5;--lavender:#c8a4f8;--lav-l:#e4d0ff;--mint:#a8e6cf;--yellow:#ffe066;--peach:#ffcba4;--white:#fffafd;--ink:#5a3d5c;--ink-l:#9b79a0;--shadow:rgba(255,143,171,0.35);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--pink-bg);color:var(--ink);font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden;}
+body::before,body::after{content:'';position:fixed;border-radius:50%;pointer-events:none;z-index:0;}
+body::before{width:600px;height:600px;background:radial-gradient(circle,#ffd6e080 0%,transparent 70%);top:-200px;left:-200px;animation:drift1 12s ease-in-out infinite;}
+body::after{width:500px;height:500px;background:radial-gradient(circle,#e4d0ff80 0%,transparent 70%);bottom:-150px;right:-150px;animation:drift2 15s ease-in-out infinite;}
+@keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(40px,30px)}}
+@keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,-40px)}}
+#sparkle-canvas{position:fixed;inset:0;pointer-events:none;z-index:0;}
+header{position:relative;z-index:1;text-align:center;padding:3rem 1rem 2rem;}
+.logo-jp{font-size:0.9rem;font-weight:700;letter-spacing:0.5em;color:var(--pink);text-shadow:0 0 20px var(--pink-l);margin-bottom:0.3rem;}
+.logo{font-size:clamp(3rem,13vw,6.5rem);font-weight:900;line-height:1;background:linear-gradient(135deg,var(--pink) 0%,var(--lavender) 50%,var(--pink-l) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 4px 12px var(--shadow));animation:logo-bounce 3s ease-in-out infinite;}
+@keyframes logo-bounce{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-8px) rotate(1deg)}}
+.logo-tagline{font-size:0.85rem;color:var(--ink-l);margin-top:0.5rem;letter-spacing:0.1em;}
+.header-decos{font-size:1.8rem;margin-top:0.5rem;letter-spacing:0.2em;}
+main{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:1rem 1.25rem 6rem;display:flex;flex-direction:column;gap:1.5rem;}
+.card{background:var(--white);border-radius:24px;padding:1.5rem;box-shadow:0 8px 32px var(--shadow),0 2px 8px rgba(200,164,248,0.2);border:2px solid var(--pink-ll);position:relative;overflow:hidden;transition:transform 0.2s,box-shadow 0.2s;}
+.card:hover{transform:translateY(-2px);box-shadow:0 12px 40px var(--shadow);}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--pink),var(--lavender),var(--mint),var(--yellow),var(--pink));background-size:200%;animation:rainbow 4s linear infinite;}
+@keyframes rainbow{0%{background-position:0%}100%{background-position:200%}}
+.card-title{font-size:0.75rem;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--pink);margin-bottom:1rem;}
+input[type="text"]{flex:1;background:var(--pink-bg);border:2px solid var(--pink-ll);border-radius:50px;color:var(--ink);font-family:'Nunito',sans-serif;font-size:0.9rem;font-weight:700;padding:0.7rem 1.2rem;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
+input[type="text"]:focus{border-color:var(--pink);box-shadow:0 0 0 4px var(--pink-ll);}
+input[type="text"]::placeholder{color:var(--pink-l);}
+button{font-family:'Nunito',sans-serif;font-weight:800;font-size:0.85rem;cursor:pointer;border:none;border-radius:50px;padding:0.65rem 1.4rem;transition:all 0.15s;letter-spacing:0.05em;}
+button:hover:not(:disabled){transform:translateY(-2px) scale(1.03);}
+button:active:not(:disabled){transform:translateY(1px) scale(0.97);}
+button:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-pink{background:linear-gradient(135deg,var(--pink),var(--pink-l));color:#fff;box-shadow:0 4px 15px var(--shadow);}
+.btn-lav{background:linear-gradient(135deg,var(--lavender),var(--lav-l));color:#fff;box-shadow:0 4px 15px rgba(200,164,248,0.4);}
+.btn-ghost{background:var(--pink-bg);color:var(--pink);border:2px solid var(--pink-ll);}
+/* Multiplayer */
+.room-mode-row{display:flex;gap:0.6rem;margin-bottom:1rem;}
+.room-mode-row button{flex:1;padding:0.7rem;font-size:0.8rem;}
+.room-input-row{display:flex;gap:0.6rem;margin-bottom:0.75rem;}
+.room-code{font-family:'Nunito',sans-serif;font-weight:900;font-size:2.5rem;text-align:center;letter-spacing:0.4em;color:var(--pink);background:var(--pink-bg);border:2px dashed var(--pink-l);border-radius:16px;padding:0.75rem;margin-bottom:0.75rem;cursor:pointer;transition:all 0.15s;user-select:all;}
+.room-code:hover{background:var(--pink-ll);}
+.room-code-hint{font-size:0.7rem;font-weight:700;color:var(--ink-l);text-align:center;margin-bottom:1rem;}
+.peers-list{display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;min-height:2rem;}
+.peer-bubble{display:flex;align-items:center;gap:0.4rem;background:linear-gradient(135deg,var(--lav-l),var(--pink-ll));border-radius:50px;padding:0.3rem 0.8rem;font-size:0.72rem;font-weight:800;color:var(--ink);}
+.peer-dot{width:8px;height:8px;border-radius:50%;background:var(--mint);flex-shrink:0;}
+.peer-dot.speaking{background:var(--pink);animation:throb 0.6s ease-in-out infinite;}
+@keyframes throb{0%,100%{transform:scale(1)}50%{transform:scale(1.4)}}
+#room-status{font-size:0.72rem;font-weight:700;color:var(--ink-l);text-align:center;min-height:1.2em;}
+#room-status.ok{color:#4caf85;}
+#room-status.err{color:var(--pink);}
+/* YouTube */
+.url-row{display:flex;gap:0.6rem;margin-bottom:0.75rem;}
+.yt-frame-wrap{border-radius:16px;overflow:hidden;position:relative;padding-bottom:56.25%;background:#000;box-shadow:0 8px 24px rgba(0,0,0,0.2);}
+.yt-frame-wrap iframe,.yt-frame-wrap>div{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;}
+#yt-player{position:absolute;inset:0;width:100%;height:100%;}
+.yt-tag{font-size:0.65rem;color:var(--ink-l);margin-top:0.5rem;word-break:break-all;text-align:center;}
+.sync-badge{display:inline-flex;align-items:center;gap:0.4rem;background:linear-gradient(135deg,var(--mint),#7fdfb8);color:#1a5c3a;font-size:0.68rem;font-weight:800;border-radius:50px;padding:0.3rem 0.8rem;margin-top:0.3rem;}
+/* Meter */
+.meter-section{margin-bottom:1rem;}
+.meter-label{font-size:0.7rem;font-weight:700;color:var(--ink-l);margin-bottom:0.4rem;letter-spacing:0.1em;}
+.meter-track{height:14px;background:var(--pink-bg);border-radius:50px;overflow:hidden;border:2px solid var(--pink-ll);}
+.meter-fill{height:100%;width:0%;border-radius:50px;background:linear-gradient(90deg,var(--mint) 0%,var(--yellow) 60%,var(--pink) 90%);transition:width 0.04s;}
+/* Reverb */
+.reverb-presets{display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.5rem;}
+.reverb-btn{font-family:'Nunito',sans-serif;font-weight:800;font-size:0.78rem;border:2px solid var(--pink-ll);border-radius:50px;padding:0.45rem 1rem;background:var(--pink-bg);color:var(--ink-l);cursor:pointer;transition:all 0.15s;}
+.reverb-btn:hover:not(:disabled){border-color:var(--pink);color:var(--pink);transform:translateY(-2px);background:var(--white);}
+.reverb-btn.active{background:linear-gradient(135deg,var(--pink),var(--lavender));color:#fff;border-color:transparent;box-shadow:0 4px 14px var(--shadow);}
+.reverb-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+/* Record */
+.vol-row{display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;}
+.vol-label{font-size:0.72rem;font-weight:800;color:var(--ink-l);min-width:6rem;}
+input[type="range"]{flex:1;-webkit-appearance:none;height:6px;border-radius:50px;outline:none;cursor:pointer;background:linear-gradient(90deg,var(--pink) 0%,var(--pink-ll) 100%);}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--lavender));box-shadow:0 2px 8px var(--shadow);cursor:pointer;transition:transform 0.15s;}
+input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+.vol-val{font-size:0.72rem;font-weight:800;color:var(--pink);min-width:2.5rem;text-align:right;}
+.rec-center{display:flex;flex-direction:column;align-items:center;gap:0.75rem;}
+#rec-btn{width:110px;height:110px;border-radius:50%;font-size:2.5rem;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--pink),#ff6b9d);box-shadow:0 8px 30px var(--shadow),0 0 0 6px var(--pink-ll);border:none;transition:all 0.2s;}
+#rec-btn:hover:not(:disabled){transform:scale(1.08);}
+#rec-btn.recording{background:linear-gradient(135deg,#ff4d4d,#ff8c00);animation:rec-throb 0.8s ease-in-out infinite;}
+@keyframes rec-throb{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+#rec-btn:disabled{background:#ddd;box-shadow:none;}
+.rec-hint{font-size:0.75rem;font-weight:700;color:var(--ink-l);text-align:center;max-width:220px;line-height:1.4;}
+.timer{font-size:2.2rem;font-weight:900;color:var(--pink-l);transition:color 0.3s;}
+.timer.live{color:#ff4d4d;}
+#rec-status{font-size:0.75rem;font-weight:700;color:var(--ink-l);text-align:center;min-height:1.2em;margin-top:0.75rem;}
+#rec-status.ok{color:#4caf85;}
+#rec-status.err{color:var(--pink);}
+/* Countdown */
+#countdown-overlay{display:none;position:fixed;inset:0;background:rgba(255,240,245,0.92);backdrop-filter:blur(8px);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:1rem;}
+#countdown-overlay.show{display:flex;}
+#countdown-num{font-size:14rem;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--pink),var(--lavender));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:pop 1s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes pop{0%{transform:scale(0.4);opacity:0}100%{transform:scale(1);opacity:1}}
+#countdown-label{font-size:1.1rem;font-weight:800;color:var(--ink-l);letter-spacing:0.1em;}
+/* Takes */
+.takes-empty{text-align:center;font-size:0.85rem;font-weight:700;color:var(--pink-l);padding:1.5rem 0;}
+.take{background:linear-gradient(135deg,#fff5f9,#f9f0ff);border-radius:16px;padding:1rem 1.1rem;margin-bottom:0.75rem;border:2px solid var(--pink-ll);box-shadow:0 4px 16px rgba(255,143,171,0.15);}
+.take-header{display:flex;align-items:center;gap:0.6rem;margin-bottom:0.6rem;}
+.take-num{font-size:1.5rem;font-weight:900;background:linear-gradient(135deg,var(--pink),var(--lavender));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;min-width:2.5rem;}
+.take-name{flex:1;font-size:0.72rem;font-weight:700;color:var(--ink-l);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.take-dur{font-size:0.68rem;font-weight:700;color:var(--lavender);background:var(--lav-l);padding:0.15rem 0.5rem;border-radius:50px;}
+.take audio{width:100%;height:36px;margin-bottom:0.7rem;}
+.take-actions{display:flex;gap:0.5rem;flex-wrap:wrap;}
+.take-actions button{font-size:0.72rem;padding:0.45rem 1rem;}
+/* Mix guide */
+.guide{background:linear-gradient(135deg,#fff9e6,#fff0f9);border:2px solid var(--yellow);border-radius:20px;padding:1.25rem;box-shadow:0 6px 24px rgba(255,224,102,0.3);}
+.guide-title{font-size:1rem;font-weight:900;color:var(--ink);margin-bottom:0.75rem;}
+.guide-steps{display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1rem;}
+.guide-step{display:flex;align-items:flex-start;gap:0.6rem;font-size:0.8rem;font-weight:700;color:var(--ink);line-height:1.4;}
+.step-bubble{background:linear-gradient(135deg,var(--yellow),var(--peach));color:var(--ink);border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:900;flex-shrink:0;}
+.converter-links{display:flex;flex-wrap:wrap;gap:0.5rem;}
+.converter-links a{font-family:'Nunito',sans-serif;font-weight:800;font-size:0.72rem;color:var(--ink);text-decoration:none;background:var(--white);border:2px solid var(--pink-ll);border-radius:50px;padding:0.4rem 0.9rem;transition:all 0.15s;box-shadow:0 2px 8px var(--shadow);}
+.converter-links a:hover{background:var(--pink);color:#fff;border-color:var(--pink);transform:translateY(-2px);}
+#guide-url-note{font-size:0.62rem;color:var(--ink-l);margin-top:0.6rem;word-break:break-all;text-align:center;}
+/* Mixer */
+.upload-row{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1rem;}
+@media(max-width:480px){.upload-row{grid-template-columns:1fr;}}
+.upload-slot{background:var(--pink-bg);border:2px dashed var(--pink-l);border-radius:16px;padding:1rem;text-align:center;cursor:pointer;transition:all 0.2s;position:relative;}
+.upload-slot:hover{border-color:var(--pink);background:var(--pink-ll);}
+.upload-slot.loaded{border-style:solid;border-color:var(--mint);background:#f0fff8;}
+.upload-slot input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-icon{font-size:2rem;margin-bottom:0.3rem;}
+.upload-label{font-size:0.72rem;font-weight:800;color:var(--ink-l);line-height:1.4;}
+.upload-name{font-size:0.65rem;color:var(--mint);font-weight:700;margin-top:0.3rem;word-break:break-all;}
+.mix-btn-row{display:flex;justify-content:center;margin-top:1rem;}
+#mix-status{font-size:0.75rem;font-weight:700;color:var(--ink-l);text-align:center;margin-top:0.75rem;min-height:1.2em;}
+#mix-status.ok{color:#4caf85;}
+#mix-status.err{color:var(--pink);}
+.progress-wrap{display:none;margin-top:0.75rem;background:var(--pink-bg);border-radius:50px;height:12px;border:2px solid var(--pink-ll);overflow:hidden;}
+.progress-wrap.show{display:block;}
+.progress-bar{height:100%;width:0%;border-radius:50px;background:linear-gradient(90deg,var(--pink),var(--lavender),var(--mint));background-size:200%;animation:rainbow 2s linear infinite;transition:width 0.1s;}
+.mix-result{display:none;margin-top:1rem;background:linear-gradient(135deg,#f0fff8,#fff0ff);border:2px solid var(--mint);border-radius:16px;padding:1rem;text-align:center;}
+.mix-result.show{display:block;}
+.mix-result-title{font-size:0.85rem;font-weight:900;color:var(--ink);margin-bottom:0.75rem;}
+.mix-result audio{width:100%;height:36px;margin-bottom:0.75rem;}
+/* Petals */
+.petal{position:fixed;top:-30px;pointer-events:none;z-index:0;animation:fall linear infinite;opacity:0.7;}
+@keyframes fall{0%{transform:translateY(-30px) rotate(0deg);opacity:0.8}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+/* Sync toast */
+#sync-toast{position:fixed;top:1.5rem;left:50%;transform:translateX(-50%) translateY(-80px);background:linear-gradient(135deg,var(--lavender),var(--pink));color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.85rem;padding:0.6rem 1.4rem;border-radius:50px;z-index:300;transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1),opacity 0.4s;opacity:0;pointer-events:none;box-shadow:0 4px 20px rgba(200,164,248,0.5);white-space:nowrap;}
+#sync-toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+</style>
+</head>
+<body>
+<canvas id="sparkle-canvas"></canvas>
+<div id="countdown-overlay">
+  <div id="countdown-num">3</div>
+  <div id="countdown-label">Get ready to sing~</div>
+</div>
+<div id="sync-toast"></div>
+<header>
+  <div class="logo-jp">&#12459;&#12521;&#12458;&#12465;</div>
+  <div class="logo">Kawaii Karaoke &#10024;</div>
+  <div class="logo-tagline">&#127800; sing your heart out, superstar~ &#127800;</div>
+  <div class="header-decos">&#127872; &#127908; &#128150; &#127925; &#11088;</div>
+</header>
+<main>
+
+  <!-- Multiplayer -->
+  <div class="card">
+    <div class="card-title">&#127881; Multiplayer &#8212; Sing Together!</div>
+    <div class="room-mode-row">
+      <button class="btn-pink" onclick="createRoom()">&#127968; Create Room</button>
+      <button class="btn-lav" onclick="showJoin()">&#128279; Join Room</button>
+    </div>
+    <div id="join-row" style="display:none">
+      <div class="room-input-row">
+        <input type="text" id="join-code" placeholder="Enter room code~" style="text-transform:uppercase;letter-spacing:0.2em;font-size:1rem;font-weight:900;text-align:center" maxlength="4" />
+        <button class="btn-lav" onclick="joinRoom()">Join &#10024;</button>
+      </div>
+    </div>
+    <div id="room-info" style="display:none">
+      <div class="room-code" id="room-code-display" onclick="copyCode()" title="Click to copy"></div>
+      <div class="room-code-hint">&#128203; Click the code to copy &amp; share with friends!</div>
+      <div class="peers-list" id="peers-list"></div>
+    </div>
+    <div id="room-status">Solo mode &#8212; create or join a room to sing together~ &#127800;</div>
+  </div>
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="card-title">&#127925; Step 1 &#8212; Load Your Song</div>
+    <div class="url-row">
+      <input type="text" id="yt-input" placeholder="Paste YouTube URL here~" />
+      <button class="btn-pink" onclick="loadTrack()">Load &#10024;</button>
+    </div>
+    <div id="yt-wrap" style="display:none">
+      <div class="yt-frame-wrap"><div id="yt-player"></div></div>
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem">
+        <div class="yt-tag" id="yt-tag"></div>
+        <span class="sync-badge">&#9654; Record button starts the video in sync!</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <div class="card-title">&#127908; Step 2 &#8212; Sing &amp; Record</div>
+    <div class="meter-section">
+      <div class="meter-label">&#127897; Mic Level</div>
+      <div class="meter-track"><div class="meter-fill" id="meter-fill"></div></div>
+    </div>
+    <div style="margin-bottom:0.5rem">
+      <div class="meter-label" style="margin-bottom:0.6rem">&#10024; Reverb</div>
+      <div class="reverb-presets" id="reverb-presets">
+        <button class="reverb-btn active" data-val="0"  data-tip="Bone dry ~ no reverb at all, raw and close-up"           onclick="pickReverb(this)">Dry &#129482;</button>
+        <button class="reverb-btn"        data-val="25" data-tip="Warm and smooth ~ the sweet spot for most karaoke songs"  onclick="pickReverb(this)">Warm &#128149;</button>
+        <button class="reverb-btn"        data-val="45" data-tip="Big stage energy ~ great for ballads and dramatic moments" onclick="pickReverb(this)">Stage &#127775;</button>
+        <button class="reverb-btn"        data-val="70" data-tip="Dreamy and floaty ~ ethereal vibes for slower songs"      onclick="pickReverb(this)">Dreamy &#127744;</button>
+        <button class="reverb-btn"        data-val="95" data-tip="Absolutely drenched ~ chaotic but iconic"                 onclick="pickReverb(this)">Wet af &#129397;</button>
+      </div>
+    </div>
+    <div id="reverb-tip" style="font-size:0.7rem;font-weight:700;color:var(--ink-l);margin-bottom:0.4rem;min-height:1.1em;">Bone dry ~ no reverb at all, raw and close-up</div>
+    <div id="reverb-hint" style="font-size:0.7rem;font-weight:700;color:var(--ink-l);margin-bottom:0.75rem;">&#128161; Set reverb <em>before</em> recording &#8212; it locks in when you start!</div>
+    <div class="rec-center">
+      <button id="rec-btn" onclick="handleRec()" disabled>&#127908;</button>
+      <div class="rec-hint" id="rec-hint">tap to start &#8212; video &amp; recording sync together!</div>
+      <div class="timer" id="timer">0:00</div>
+    </div>
+    <div id="rec-status">Waiting for mic permission~</div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card">
+    <div class="card-title">&#128190; Step 3 &#8212; Your Takes</div>
+    <div id="takes-list"><div class="takes-empty">No takes yet~ Hit record and sing! &#11088;</div></div>
+  </div>
+
+  <!-- Mix guide -->
+  <div class="guide" id="mix-guide" style="display:none">
+    <div class="guide-title">&#127911; Need the backing track MP3?</div>
+    <div class="guide-steps">
+      <div class="guide-step"><div class="step-bubble">1</div><span>Click a converter below to download the backing track MP3 &#128149;</span></div>
+      <div class="guide-step"><div class="step-bubble">2</div><span>Upload it in Step 4 to mix everything together! &#11088;</span></div>
+    </div>
+    <div class="converter-links" id="converter-links"></div>
+    <div id="guide-url-note"></div>
+  </div>
+
+  <!-- Step 4 -->
+  <div class="card" id="mixer-card" style="display:none">
+    <div class="card-title">&#127899; Step 4 &#8212; Mix Your Song</div>
+    <div class="upload-row">
+      <div class="upload-slot" id="slot-vocals">
+        <input type="file" accept="audio/*" onchange="loadVocals(this)" />
+        <div class="upload-icon">&#127908;</div>
+        <div class="upload-label">Vocals<br><span style="color:var(--pink-l);font-weight:400">upload your recorded take</span></div>
+        <div class="upload-name" id="vocals-name"></div>
+      </div>
+      <div class="upload-slot" id="slot-backing">
+        <input type="file" accept="audio/*" onchange="loadBacking(this)" />
+        <div class="upload-icon">&#127925;</div>
+        <div class="upload-label">Backing Track<br><span style="color:var(--pink-l);font-weight:400">upload the MP3 you downloaded</span></div>
+        <div class="upload-name" id="backing-name"></div>
+      </div>
+    </div>
+    <div class="vol-row">
+      <span class="vol-label">&#127908; Vocals</span>
+      <input type="range" id="vol-vocals" min="0" max="200" value="100" oninput="document.getElementById('vol-vocals-val').textContent=this.value+'%'" />
+      <span class="vol-val" id="vol-vocals-val">100%</span>
+    </div>
+    <div class="vol-row">
+      <span class="vol-label">&#127925; Backing</span>
+      <input type="range" id="vol-backing" min="0" max="200" value="100" oninput="document.getElementById('vol-backing-val').textContent=this.value+'%'" />
+      <span class="vol-val" id="vol-backing-val">100%</span>
+    </div>
+    <div class="mix-btn-row">
+      <button class="btn-lav" id="mix-btn" onclick="mixTracks()" disabled>&#10024; Mix &amp; Download &#10024;</button>
+    </div>
+    <div class="progress-wrap" id="mix-progress"><div class="progress-bar" id="mix-bar"></div></div>
+    <div id="mix-status">Upload both files to mix~ &#128149;</div>
+    <div class="mix-result" id="mix-result">
+      <div class="mix-result-title">&#11088; Your song is ready! &#11088;</div>
+      <audio id="mix-audio" controls></audio>
+      <button class="btn-pink" onclick="dlMix()" style="width:100%">&#128190; Download Your Song</button>
+    </div>
+  </div>
+
+</main>
+<script src="https://www.youtube.com/iframe_api"></script>
+<script>
+// ── Petals ────────────────────────────────────────────────
+(function(){
+  var e=['\uD83C\uDF38','\uD83C\uDF3A','\u2B50','\u2728','\uD83C\uDF38'];
+  for(var i=0;i<18;i++){var p=document.createElement('div');p.className='petal';p.textContent=e[Math.floor(Math.random()*e.length)];p.style.left=Math.random()*100+'vw';p.style.fontSize=(0.8+Math.random()*1.2)+'rem';p.style.animationDuration=(6+Math.random()*10)+'s';p.style.animationDelay=(-Math.random()*10)+'s';document.body.appendChild(p);}
+})();
+
+// ── Sparkles ──────────────────────────────────────────────
+var canvas=document.getElementById('sparkle-canvas'),ctx=canvas.getContext('2d'),sparks=[];
+function rsz(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+rsz();window.addEventListener('resize',rsz);
+document.addEventListener('click',function(e){for(var i=0;i<6;i++)sparks.push({x:e.clientX,y:e.clientY,vx:(Math.random()-0.5)*4,vy:(Math.random()-0.5)*4-2,life:1,size:3+Math.random()*4,color:['#ff8fab','#c8a4f8','#ffe066','#a8e6cf'][Math.floor(Math.random()*4)]});});
+(function loop(){ctx.clearRect(0,0,canvas.width,canvas.height);sparks=sparks.filter(function(s){return s.life>0;});sparks.forEach(function(s){s.x+=s.vx;s.y+=s.vy;s.vy+=0.1;s.life-=0.03;ctx.globalAlpha=s.life;ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(s.x,s.y,s.size*s.life,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;requestAnimationFrame(loop);})();
+
+// ── YouTube ────────────────────────────────────────────────
+var ytPlayer=null,ytReady=false,pendingId=null,currentYTUrl='';
+window.onYouTubeIframeAPIReady=function(){ytReady=true;if(pendingId)createPlayer(pendingId);};
+function createPlayer(id){
+  if(ytPlayer){ytPlayer.loadVideoById(id);ytPlayer.pauseVideo();return;}
+  ytPlayer=new YT.Player('yt-player',{videoId:id,playerVars:{rel:0,modestbranding:1,playsinline:1},events:{onReady:function(e){e.target.pauseVideo();}}});
+}
+function extractId(s){s=s.trim();var pats=[/[?&]v=([A-Za-z0-9_-]{11})/,/youtu\.be\/([A-Za-z0-9_-]{11})/,/\/embed\/([A-Za-z0-9_-]{11})/,/\/shorts\/([A-Za-z0-9_-]{11})/,/^([A-Za-z0-9_-]{11})$/];for(var i=0;i<pats.length;i++){var m=s.match(pats[i]);if(m)return m[1];}return null;}
+function loadTrack(){
+  var id=extractId(document.getElementById('yt-input').value);
+  if(!id){setStatus('Could not find a YouTube video ID~','err');return;}
+  currentYTUrl='https://www.youtube.com/watch?v='+id;
+  document.getElementById('yt-wrap').style.display='block';
+  document.getElementById('yt-tag').textContent=currentYTUrl;
+  updateGuide(currentYTUrl);
+  if(ytReady)createPlayer(id);else pendingId=id;
+  setStatus('Track loaded~ Hit Record to start!','ok');
+  if(socket&&socket.readyState===1){
+    socket.send(JSON.stringify({type:'sync-video',url:currentYTUrl}));
+    showSyncToast('🌸 Synced song to the room~');
+  }
+}
+document.getElementById('yt-input').addEventListener('keydown',function(e){if(e.key==='Enter')loadTrack();});
+
+var CONVERTERS=[
+  {name:'cobalt.tools',url:function(v){return'https://cobalt.tools/';}},
+  {name:'yt1s.com',url:function(v){return'https://yt1s.com/youtube-to-mp3?q='+encodeURIComponent(v);}},
+  {name:'y2mate',url:function(v){return'https://www.y2mate.com/youtube-mp3/';}},
+  {name:'loader.to',url:function(v){return'https://loader.to/en15/youtube-mp3-downloader.html?url='+encodeURIComponent(v);}},
+];
+function updateGuide(ytUrl){var c=document.getElementById('converter-links');c.innerHTML='';CONVERTERS.forEach(function(cv){var a=document.createElement('a');a.href=cv.url(ytUrl);a.target='_blank';a.rel='noopener noreferrer';a.textContent=cv.name;c.appendChild(a);});document.getElementById('guide-url-note').textContent='Track: '+ytUrl;}
+
+// ── Mic + Reverb ──────────────────────────────────────────
+var audioCtx,analyser,recorder,reverbNode,dryGain,wetGain;
+var chunks=[];
+
+async function initMic(){
+  try{
+    var stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+    var micSource=audioCtx.createMediaStreamSource(stream);
+    analyser=audioCtx.createAnalyser();analyser.fftSize=256;
+    micSource.connect(analyser);
+    dryGain=audioCtx.createGain();dryGain.gain.value=1;
+    wetGain=audioCtx.createGain();wetGain.gain.value=0;
+    reverbNode=audioCtx.createConvolver();
+    reverbNode.buffer=makeReverbIR(audioCtx,2.5,2);
+    micSource.connect(dryGain);
+    micSource.connect(reverbNode);
+    reverbNode.connect(wetGain);
+    var dest=audioCtx.createMediaStreamDestination();
+    dryGain.connect(dest);wetGain.connect(dest);
+    runMeter();
+    recorder=new MediaRecorder(dest.stream);
+    recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data);};
+    recorder.onstop=finaliseTake;
+    document.getElementById('rec-btn').disabled=false;
+    setStatus('Mic ready~ Hit Record to start!','ok');
+  }catch(e){setStatus('Could not access mic~ Check permissions!','err');}
+}
+
+function makeReverbIR(ctx,duration,decay){
+  var sr=ctx.sampleRate,len=Math.floor(sr*duration),buf=ctx.createBuffer(2,len,sr);
+  for(var ch=0;ch<2;ch++){var d=buf.getChannelData(ch);for(var i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,decay);}
+  return buf;
+}
+
+function setReverbWet(val){if(!wetGain||!dryGain)return;var w=val/100;wetGain.gain.value=w;dryGain.gain.value=1-(w*0.5);}
+
+function pickReverb(btn){
+  document.querySelectorAll('.reverb-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  setReverbWet(parseInt(btn.dataset.val));
+  document.getElementById('reverb-tip').textContent=btn.dataset.tip;
+}
+
+function runMeter(){
+  var buf=new Float32Array(analyser.fftSize),fill=document.getElementById('meter-fill');
+  (function tick(){analyser.getFloatTimeDomainData(buf);var rms=0;for(var i=0;i<buf.length;i++)rms+=buf[i]*buf[i];fill.style.width=Math.min(100,Math.sqrt(rms/buf.length)*380)+'%';requestAnimationFrame(tick);})();
+}
+
+// ── Recording ─────────────────────────────────────────────
+var isRecording=false,takeNum=0,recStart,timerInt;
+
+function handleRec(){if(!isRecording)startCountdown();else stopRec();}
+
+function startCountdown(){
+  var overlay=document.getElementById('countdown-overlay'),numEl=document.getElementById('countdown-num');
+  overlay.classList.add('show');var n=3;numEl.textContent=n;
+  var iv=setInterval(function(){
+    n--;
+    if(n<=0){clearInterval(iv);overlay.classList.remove('show');startRec();}
+    else{numEl.textContent=n;numEl.style.animation='none';void numEl.offsetWidth;numEl.style.animation='pop 1s cubic-bezier(0.34,1.56,0.64,1)';}
+  },1000);
+}
+
+function startRec(){
+  if(socket&&socket.readyState===1&&isHost)socket.send(JSON.stringify({type:'sync-start'}));
+  chunks=[];recorder.start(100);isRecording=true;recStart=Date.now();
+  if(ytPlayer&&typeof ytPlayer.seekTo==='function'){ytPlayer.seekTo(0,true);ytPlayer.playVideo();}
+  document.querySelectorAll('.reverb-btn').forEach(function(b){b.disabled=true;});
+  document.getElementById('reverb-hint').textContent='Reverb locked for this take~';
+  document.getElementById('reverb-hint').style.color='var(--pink)';
+  var btn=document.getElementById('rec-btn');btn.classList.add('recording');btn.textContent='\u23F9';
+  document.getElementById('rec-hint').textContent='tap to stop recording!';
+  document.getElementById('timer').classList.add('live');
+  timerInt=setInterval(function(){var s=Math.floor((Date.now()-recStart)/1000);document.getElementById('timer').textContent=Math.floor(s/60)+':'+(s%60<10?'0':'')+(s%60);},500);
+  setStatus('Recording~ You\'re a star!','err');
+}
+
+function stopRec(){
+  if(socket&&socket.readyState===1&&isHost)socket.send(JSON.stringify({type:'sync-stop'}));
+  recorder.stop();isRecording=false;clearInterval(timerInt);
+  if(ytPlayer&&typeof ytPlayer.pauseVideo==='function')ytPlayer.pauseVideo();
+  document.querySelectorAll('.reverb-btn').forEach(function(b){b.disabled=false;});
+  document.getElementById('reverb-hint').textContent='Set reverb before recording ~ it locks in when you start!';
+  document.getElementById('reverb-hint').style.color='var(--ink-l)';
+  var btn=document.getElementById('rec-btn');btn.classList.remove('recording');btn.textContent='\uD83C\uDF38';
+  document.getElementById('rec-hint').textContent='tap to start ~ video & recording sync together!';
+  document.getElementById('timer').classList.remove('live');document.getElementById('timer').textContent='0:00';
+  setStatus('Take saved!','ok');
+}
+
+function finaliseTake(){
+  var blob=new Blob(chunks,{type:recorder.mimeType||'audio/webm'});
+  var url=URL.createObjectURL(blob);
+  var dur=((Date.now()-recStart)/1000).toFixed(1);
+  takeNum++;addTake(takeNum,url,dur);
+  document.getElementById('mix-guide').style.display='block';
+  document.getElementById('mixer-card').style.display='block';
+}
+
+function addTake(n,url,dur){
+  var list=document.getElementById('takes-list'),empty=list.querySelector('.takes-empty');
+  if(empty)empty.remove();
+  var ext=(recorder.mimeType||'').includes('ogg')?'ogg':'webm';
+  var fname='vocal-take-'+(n<10?'0':'')+n+'.'+ext;
+  var el=document.createElement('div');el.className='take';el.id='take-'+n;
+  el.innerHTML='<div class="take-header"><span class="take-num">#'+(n<10?'0':'')+n+' \u2728</span><span class="take-name">'+fname+'</span><span class="take-dur">'+dur+'s</span></div><audio controls src="'+url+'"></audio><div class="take-actions"><button class="btn-pink" onclick="dlTake(\''+url+'\',\''+fname+'\')">&#128190; Download Vocals</button><button class="btn-ghost" onclick="delTake('+n+',\''+url+'\')">&#128465; Delete</button></div>';
+  list.prepend(el);
+}
+function dlTake(url,name){var a=document.createElement('a');a.href=url;a.download=name;a.click();}
+function delTake(n,url){URL.revokeObjectURL(url);var el=document.getElementById('take-'+n);if(el)el.remove();var list=document.getElementById('takes-list');if(!list.children.length)list.innerHTML='<div class="takes-empty">No takes yet~ Hit record and sing!</div>';}
+function setStatus(msg,type){var el=document.getElementById('rec-status');el.textContent=msg;el.className=type||'';}
+
+// ── Multiplayer ────────────────────────────────────────────
+var PARTYKIT_HOST='karaoke-server.arcmonitoring.partykit.dev';
+var socket=null,roomCode=null,isHost=false,peers={},localStream=null;
+
+function randCode(){return Math.random().toString(36).substring(2,6).toUpperCase();}
+function createRoom(){roomCode=randCode();isHost=true;connectToRoom(roomCode);}
+function showJoin(){document.getElementById('join-row').style.display='block';document.getElementById('join-code').focus();}
+function joinRoom(){var code=document.getElementById('join-code').value.trim().toUpperCase();if(code.length<2){setRoomStatus('Enter a room code first~','err');return;}roomCode=code;isHost=false;connectToRoom(roomCode);}
+
+async function connectToRoom(code){
+  setRoomStatus('Connecting to room '+code+'...','');
+  try{localStream=await navigator.mediaDevices.getUserMedia({audio:true});}
+  catch(e){setRoomStatus('Need mic access for multiplayer~','err');return;}
+  socket=new WebSocket('wss://'+PARTYKIT_HOST+'/party/'+code);
+  socket.onopen=function(){
+    document.getElementById('room-info').style.display='block';
+    document.getElementById('room-code-display').textContent=code;
+    setRoomStatus(isHost?'Room created! Share the code~ \uD83C\uDF38':'Joined! \uD83C\uDF89','ok');
+    addPeerBubble('you','You \uD83D\uDC4B',true);
+  };
+  socket.onmessage=async function(e){
+    var msg=JSON.parse(e.data);
+    if(msg.type==='offer')await handleOffer(msg.from,msg.sdp);
+    if(msg.type==='answer'&&peers[msg.from])await peers[msg.from].pc.setRemoteDescription({type:'answer',sdp:msg.sdp});
+    if(msg.type==='ice'&&peers[msg.from])await peers[msg.from].pc.addIceCandidate(msg.candidate).catch(function(){});
+    if(msg.type==='peers'&&msg.count>1)await initiateOffer('peer-'+Date.now());
+    if(msg.type==='peer-joined'){
+      addPeerBubble(msg.from,'\uD83C\uDF38 Friend',false);
+      setRoomStatus('Someone joined! \uD83C\uDF89','ok');
+      if(isHost)await initiateOffer(msg.from);
+      if(isHost&&currentYTUrl&&socket&&socket.readyState===1)socket.send(JSON.stringify({type:'sync-video',url:currentYTUrl}));
+    }
+    if(msg.type==='peer-left'){removePeerBubble(msg.id);if(peers[msg.id]){peers[msg.id].pc.close();delete peers[msg.id];}setRoomStatus('Someone left the room~','');}
+    if(msg.type==='sync-start'&&!isHost)startCountdown();
+    if(msg.type==='sync-stop'&&!isHost&&isRecording)stopRec();
+    if(msg.type==='sync-video'){
+      var sid=extractId(msg.url);
+      if(sid&&msg.url!==currentYTUrl){
+        currentYTUrl=msg.url;
+        document.getElementById('yt-input').value=msg.url;
+        document.getElementById('yt-wrap').style.display='block';
+        document.getElementById('yt-tag').textContent=currentYTUrl;
+        updateGuide(currentYTUrl);
+        if(ytReady)createPlayer(sid);else pendingId=sid;
+        setStatus('Song synced~ Hit Record to start!','ok');
+        showSyncToast('🎵 A friend loaded a new song~');
+      }
+    }
+  };
+  socket.onerror=function(){setRoomStatus('Connection error~ try again','err');};
+  socket.onclose=function(){setRoomStatus('Disconnected~','');};
+}
+
+function sendSignal(obj){if(socket&&socket.readyState===1)socket.send(JSON.stringify(obj));}
+
+async function initiateOffer(peerId){
+  var pc=createPC(peerId);
+  var offer=await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  sendSignal({type:'offer',sdp:offer.sdp});
+}
+
+async function handleOffer(peerId,sdp){
+  var pc=createPC(peerId);
+  await pc.setRemoteDescription({type:'offer',sdp:sdp});
+  var answer=await pc.createAnswer();
+  await pc.setLocalDescription(answer);
+  sendSignal({type:'answer',sdp:answer.sdp});
+  addPeerBubble(peerId,'\uD83C\uDF38 Friend',false);
+}
+
+function createPC(peerId){
+  if(peers[peerId]&&peers[peerId].pc)return peers[peerId].pc;
+  var pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});
+  localStream.getTracks().forEach(function(t){pc.addTrack(t,localStream);});
+  pc.onicecandidate=function(e){if(e.candidate)sendSignal({type:'ice',candidate:e.candidate});};
+  pc.ontrack=function(e){var a=new Audio();a.srcObject=e.streams[0];a.autoplay=true;monitorVoice(peerId,e.streams[0]);};
+  peers[peerId]={pc:pc};return pc;
+}
+
+function monitorVoice(peerId,stream){
+  try{
+    var ac=new AudioContext(),src=ac.createMediaStreamSource(stream),an=ac.createAnalyser();
+    an.fftSize=256;src.connect(an);var buf=new Float32Array(an.fftSize);
+    setInterval(function(){an.getFloatTimeDomainData(buf);var rms=0;for(var i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);var dot=document.querySelector('#bubble-'+peerId+' .peer-dot');if(dot)dot.className='peer-dot'+(rms>0.01?' speaking':'');},100);
+  }catch(e){}
+}
+
+function addPeerBubble(id,name,isYou){
+  var list=document.getElementById('peers-list');if(document.getElementById('bubble-'+id))return;
+  var b=document.createElement('div');b.className='peer-bubble';b.id='bubble-'+id;
+  b.innerHTML='<div class="peer-dot'+(isYou?' speaking':'')+'"></div>'+name;
+  list.appendChild(b);
+}
+function removePeerBubble(id){var b=document.getElementById('bubble-'+id);if(b)b.remove();}
+function copyCode(){navigator.clipboard.writeText(roomCode).then(function(){setRoomStatus('Code copied! Share with friends~','ok');});}
+function setRoomStatus(msg,type){var el=document.getElementById('room-status');el.textContent=msg;el.className=type||'';}
+
+var _toastTimer;
+function showSyncToast(msg){var t=document.getElementById('sync-toast');t.textContent=msg;t.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(function(){t.classList.remove('show');},3200);}
+
+// ── Mixer ─────────────────────────────────────────────────
+var vocalsBuffer=null,backingBuffer=null,mixCtx2=null,mixBlob=null;
+function getMixCtx(){if(!mixCtx2)mixCtx2=new(window.AudioContext||window.webkitAudioContext)();return mixCtx2;}
+function loadVocals(input){var file=input.files[0];if(!file)return;document.getElementById('vocals-name').textContent=file.name;document.getElementById('slot-vocals').classList.add('loaded');file.arrayBuffer().then(function(buf){return getMixCtx().decodeAudioData(buf);}).then(function(d){vocalsBuffer=d;checkMixReady();}).catch(function(){setMixStatus('Could not decode vocals~','err');});}
+function loadBacking(input){var file=input.files[0];if(!file)return;document.getElementById('backing-name').textContent=file.name;document.getElementById('slot-backing').classList.add('loaded');file.arrayBuffer().then(function(buf){return getMixCtx().decodeAudioData(buf);}).then(function(d){backingBuffer=d;checkMixReady();}).catch(function(){setMixStatus('Could not decode backing~','err');});}
+function checkMixReady(){var ready=vocalsBuffer&&backingBuffer;document.getElementById('mix-btn').disabled=!ready;if(ready)setMixStatus('Both loaded~ Ready to mix!','ok');}
+
+async function mixTracks(){
+  if(!vocalsBuffer||!backingBuffer)return;
+  var volV=document.getElementById('vol-vocals').value/100,volB=document.getElementById('vol-backing').value/100;
+  var prog=document.getElementById('mix-progress'),bar=document.getElementById('mix-bar');
+  prog.classList.add('show');bar.style.width='0%';setMixStatus('Mixing~','');
+  document.getElementById('mix-btn').disabled=true;document.getElementById('mix-result').classList.remove('show');
+  await new Promise(function(r){setTimeout(r,50);});
+  try{
+    var c=getMixCtx(),sr=c.sampleRate;
+    var numCh=Math.max(vocalsBuffer.numberOfChannels,backingBuffer.numberOfChannels);
+    var length=Math.max(vocalsBuffer.length,backingBuffer.length);
+    bar.style.width='30%';await new Promise(function(r){setTimeout(r,30);});
+    var offCtx=new OfflineAudioContext(numCh,length,sr);
+    var vSrc=offCtx.createBufferSource(),vGain=offCtx.createGain();vSrc.buffer=vocalsBuffer;vGain.gain.value=volV;vSrc.connect(vGain);vGain.connect(offCtx.destination);vSrc.start(0);
+    var bSrc=offCtx.createBufferSource(),bGain=offCtx.createGain();bSrc.buffer=backingBuffer;bGain.gain.value=volB;bSrc.connect(bGain);bGain.connect(offCtx.destination);bSrc.start(0);
+    bar.style.width='60%';
+    var rendered=await offCtx.startRendering();
+    bar.style.width='85%';await new Promise(function(r){setTimeout(r,30);});
+    var wavBlob=audioBufferToWav(rendered);mixBlob=wavBlob;
+    var url=URL.createObjectURL(wavBlob);bar.style.width='100%';await new Promise(function(r){setTimeout(r,200);});
+    document.getElementById('mix-audio').src=url;document.getElementById('mix-result').classList.add('show');
+    prog.classList.remove('show');setMixStatus('Done! Your song is ready~','ok');
+  }catch(e){prog.classList.remove('show');setMixStatus('Something went wrong~','err');}
+  document.getElementById('mix-btn').disabled=false;
+}
+
+function dlMix(){if(!mixBlob)return;var a=document.createElement('a');a.href=URL.createObjectURL(mixBlob);a.download='my-karaoke-song.wav';a.click();}
+function setMixStatus(msg,type){var el=document.getElementById('mix-status');el.textContent=msg;el.className=type||'';}
+
+function audioBufferToWav(buffer){
+  var numCh=buffer.numberOfChannels,sr=buffer.sampleRate,len=buffer.length;
+  var pcm=new Float32Array(len*numCh);
+  for(var ch=0;ch<numCh;ch++){var d=buffer.getChannelData(ch);for(var i=0;i<len;i++)pcm[i*numCh+ch]=d[i];}
+  var samples=new Int16Array(pcm.length);
+  for(var i=0;i<pcm.length;i++){var s=Math.max(-1,Math.min(1,pcm[i]));samples[i]=s<0?s*0x8000:s*0x7FFF;}
+  var hdr=new ArrayBuffer(44),v=new DataView(hdr);
+  function ws(off,str){for(var i=0;i<str.length;i++)v.setUint8(off+i,str.charCodeAt(i));}
+  var ds=samples.byteLength;
+  ws(0,'RIFF');v.setUint32(4,36+ds,true);ws(8,'WAVE');ws(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);
+  v.setUint16(22,numCh,true);v.setUint32(24,sr,true);v.setUint32(28,sr*numCh*2,true);v.setUint16(32,numCh*2,true);
+  v.setUint16(34,16,true);ws(36,'data');v.setUint32(40,ds,true);
+  return new Blob([hdr,samples.buffer],{type:'audio/wav'});
+}
+
+initMic();
+</script>
+</body>
+</html>
