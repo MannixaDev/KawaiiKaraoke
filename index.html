@@ -392,13 +392,13 @@ var ytPlayer=null,ytReady=false,pendingId=null,currentYTUrl='';
 var ytFallbackIds=[],ytFallbackIdx=0;
 window.onYouTubeIframeAPIReady=function(){ytReady=true;if(pendingId)createPlayer(pendingId);};
 function createPlayer(id){
-  if(ytPlayer){ytPlayer.loadVideoById(id);ytPlayer.pauseVideo();return;}
-  ytPlayer=new YT.Player('yt-player',{videoId:id,playerVars:{rel:0,modestbranding:1,playsinline:1},events:{
-    onReady:function(e){e.target.pauseVideo();},
+  if(ytPlayer){ytPlayer.cueVideoById(id);return;}
+  ytPlayer=new YT.Player('yt-player',{videoId:id,playerVars:{rel:0,modestbranding:1,playsinline:1,autoplay:0},events:{
+    onReady:function(e){e.target.cueVideoById(id);},
     onError:function(e){
       // 100=not found, 101/150=embedding disabled — try next fallback silently
       if((e.data===100||e.data===101||e.data===150)&&ytFallbackIdx<ytFallbackIds.length){
-        ytPlayer.loadVideoById(ytFallbackIds[ytFallbackIdx++]);
+        ytPlayer.cueVideoById(ytFallbackIds[ytFallbackIdx++]);
       } else if(e.data===100||e.data===101||e.data===150){
         setStatus('Video can\'t be embedded~ try pasting a different URL!','err');
       }
