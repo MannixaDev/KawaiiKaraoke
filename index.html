@@ -549,7 +549,12 @@ async function initMic(){
       var lag=autoWriteHead-autoReadHead;
       if(lag>512||lag<16)autoReadHead=autoWriteHead-128;
     };
-    autoProcNode.connect(autotuneOutGain);autotuneOutGain.connect(dest);
+    // Waveshaper saturation — makes pitch-shifted voice sound electronic/processed
+    var autoShaper=audioCtx.createWaveShaper();
+    var shapeCurve=new Float32Array(512);
+    for(var i=0;i<512;i++){var x=(i*2/511)-1;shapeCurve[i]=Math.tanh(x*4);}
+    autoShaper.curve=shapeCurve;autoShaper.oversample='2x';
+    autoProcNode.connect(autoShaper);autoShaper.connect(autotuneOutGain);autotuneOutGain.connect(dest);
     // CRITICAL: ScriptProcessorNode only fires when connected to audioCtx.destination
     var autoSink=audioCtx.createGain();autoSink.gain.value=0;
     autoProcNode.connect(autoSink);autoSink.connect(audioCtx.destination);
@@ -573,9 +578,9 @@ function pickReverb(btn){
   document.getElementById('reverb-tip').textContent=btn.dataset.tip;
   if(btn.dataset.val==='autotune'){
     autotuneOn=true;
-    if(dryGain)dryGain.gain.value=0;    // mute dry — only hear pitch-corrected voice
-    if(wetGain)wetGain.gain.value=0;
-    if(autotuneOutGain)autotuneOutGain.gain.value=1; // full ring buffer output
+    if(dryGain)dryGain.gain.value=0;
+    if(wetGain)wetGain.gain.value=0.25;      // small reverb for T-Pain "produced" feel
+    if(autotuneOutGain)autotuneOutGain.gain.value=1;
   }else{
     autotuneOn=false;
     if(autotuneOutGain)autotuneOutGain.gain.value=0;
