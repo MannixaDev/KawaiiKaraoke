@@ -506,8 +506,7 @@ function updateGuide(ytUrl){var c=document.getElementById('converter-links');c.i
 
 // ── Mic + Reverb ──────────────────────────────────────────
 var audioCtx,analyser,recorder,reverbNode,dryGain,wetGain;
-var autoProcNode,autotuneOutGain,pitchAnalyser;
-var tuneOsc,tuneOsc2,tuneOscGain,tuneOscMaster,autotuneOn=false;
+var autoProcNode,autotuneOutGain,pitchAnalyser,autotuneOn=false;
 var autoRatio=1.0,autoWriteHead=0,autoReadHead=0,autoRingBuf=new Float32Array(65536);
 var chunks=[];
 
@@ -531,7 +530,7 @@ async function initMic(){
     recorder=new MediaRecorder(dest.stream);
     recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data);};
     recorder.onstop=finaliseTake;
-    pitchAnalyser=audioCtx.createAnalyser();pitchAnalyser.fftSize=1024;
+    pitchAnalyser=audioCtx.createAnalyser();pitchAnalyser.fftSize=2048;
     micSource.connect(pitchAnalyser);
     autoProcNode=audioCtx.createScriptProcessor(512,1,1);
     autotuneOutGain=audioCtx.createGain();autotuneOutGain.gain.value=0;
@@ -554,15 +553,7 @@ async function initMic(){
     // CRITICAL: ScriptProcessorNode only fires when connected to audioCtx.destination
     var autoSink=audioCtx.createGain();autoSink.gain.value=0;
     autoProcNode.connect(autoSink);autoSink.connect(audioCtx.destination);
-    // T-Pain oscillator: sawtooth + square slightly detuned, amplitude envelope tracks voice
-    tuneOsc=audioCtx.createOscillator();tuneOsc.type='sawtooth';tuneOsc.frequency.value=220;
-    tuneOsc2=audioCtx.createOscillator();tuneOsc2.type='square';tuneOsc2.frequency.value=220;tuneOsc2.detune.value=12;
-    tuneOscGain=audioCtx.createGain();tuneOscGain.gain.value=0;
-    tuneOscMaster=audioCtx.createGain();tuneOscMaster.gain.value=0;
-    tuneOsc.connect(tuneOscGain);tuneOsc2.connect(tuneOscGain);
-    tuneOscGain.connect(tuneOscMaster);tuneOscMaster.connect(dest);
-    tuneOsc.start();tuneOsc2.start();
-    setInterval(detectAndUpdatePitch,80);
+    setInterval(detectAndUpdatePitch,50);
     document.getElementById('rec-btn').disabled=false;
     setStatus('Mic ready~ Hit Record to start!','ok');
   }catch(e){setStatus('Could not access mic~ Check permissions!','err');}
@@ -582,39 +573,32 @@ function pickReverb(btn){
   document.getElementById('reverb-tip').textContent=btn.dataset.tip;
   if(btn.dataset.val==='autotune'){
     autotuneOn=true;
-    if(dryGain)dryGain.gain.value=0.12;   // small dry mix keeps it human
+    if(dryGain)dryGain.gain.value=0;    // mute dry — only hear pitch-corrected voice
     if(wetGain)wetGain.gain.value=0;
-    if(autotuneOutGain)autotuneOutGain.gain.value=0.5; // ring buffer pitch-shift
-    if(tuneOscMaster)tuneOscMaster.gain.value=1;       // T-Pain oscillator buzz
+    if(autotuneOutGain)autotuneOutGain.gain.value=1; // full ring buffer output
   }else{
     autotuneOn=false;
     if(autotuneOutGain)autotuneOutGain.gain.value=0;
-    if(tuneOscMaster)tuneOscMaster.gain.value=0;
-    if(tuneOscGain)tuneOscGain.gain.value=0;
     setReverbWet(parseInt(btn.dataset.val));
   }
 }
 
 function detectAndUpdatePitch(){
   if(!pitchAnalyser||!autotuneOn)return;
-  var buf=new Float32Array(1024);pitchAnalyser.getFloatTimeDomainData(buf);
-  // RMS amplitude for envelope follower
+  var buf=new Float32Array(2048);pitchAnalyser.getFloatTimeDomainData(buf);
+  // Silence gate — skip if signal too quiet
   var rms=0;for(var i=0;i<buf.length;i++)rms+=buf[i]*buf[i];rms=Math.sqrt(rms/buf.length);
-  // Silence gate — fade oscillator out when no voice
-  if(rms<0.006){if(tuneOscGain)tuneOscGain.gain.value*=0.88;return;}
+  if(rms<0.008)return;
   var sr=audioCtx.sampleRate,best=-1,bestLag=40;
-  for(var lag=40;lag<500;lag++){var s=0;for(var i=0;i<buf.length-lag;i++)s+=buf[i]*buf[i+lag];if(s>best){best=s;bestLag=lag;}}
-  if(best<0.005)return;
+  // Autocorrelation over larger buffer for more accurate pitch detection
+  for(var lag=40;lag<600;lag++){var s=0;for(var i=0;i<600;i++)s+=buf[i]*buf[i+lag];if(s>best){best=s;bestLag=lag;}}
+  if(best<0.01)return;
   var f=sr/bestLag;
   if(f<80||f>1000)return;
   var semitones=Math.round(12*Math.log2(f/440));
   var target=440*Math.pow(2,semitones/12);
-  // Fast convergence — snap to nearest semitone quickly (T-Pain hard correction)
-  autoRatio=0.15*autoRatio+0.85*(target/f);
-  // Drive oscillator to snapped pitch
-  if(tuneOsc){tuneOsc.frequency.value=target;tuneOsc2.frequency.value=target;}
-  // Amplitude envelope — oscillator follows voice loudness
-  if(tuneOscGain)tuneOscGain.gain.value=Math.min(1.4,rms*7);
+  // Instant snap — ratio converges hard to target (the T-Pain "hard retune" sound)
+  autoRatio=0.05*autoRatio+0.95*(target/f);
 }
 
 function runMeter(){
