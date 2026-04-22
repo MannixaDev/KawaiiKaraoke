@@ -206,6 +206,24 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
   #mix-guide{grid-column:1/3;}
   #mixer-card{grid-column:3;}
 
+  /* ── Multiplayer sidebar tweaks ── */
+  /* Stack create/join vertically so they don't squash */
+  #multi-card .room-mode-row{flex-direction:column;gap:0.45rem;}
+  #multi-card .room-mode-row button{font-size:0.8rem;padding:0.65rem 1rem;}
+  /* Smaller room code — still readable, not dominating */
+  #multi-card .room-code{font-size:2rem;letter-spacing:0.25em;padding:0.55rem 0.75rem;margin-bottom:0.5rem;}
+  #multi-card .room-code-hint{margin-bottom:0.6rem;}
+  /* Copy buttons row — tighter */
+  #multi-card #room-info>div:nth-child(2) button{font-size:0.68rem;padding:0.45rem 0.5rem;}
+  /* Reactions — smaller emoji, tighter gap */
+  #multi-card .react-btn{font-size:1.15rem;padding:0.38rem 0.5rem;}
+  /* Queue input row — don't let button overflow */
+  #multi-card .room-input-row{flex-wrap:nowrap;}
+  #multi-card #queue-input{font-size:0.75rem;min-width:0;}
+  #multi-card .room-input-row button{white-space:nowrap;flex-shrink:0;font-size:0.72rem;padding:0.6rem 0.7rem;}
+  /* Peers bubbles — slightly smaller text */
+  #multi-card .peer-bubble{font-size:0.68rem;padding:0.25rem 0.65rem;}
+
   /* Video is the star — give it a little more height */
   #step1-card .yt-frame-wrap{padding-bottom:52%;}
 
