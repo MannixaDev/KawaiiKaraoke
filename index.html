@@ -199,12 +199,13 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
   .guide{padding:1.5rem 1.75rem;}
 
   /* Column placement — auto-row so hidden cards collapse cleanly */
-  #multi-card{grid-column:1;}
-  #step1-card{grid-column:2;}
-  #step2-card{grid-column:3;}
-  #step3-card{grid-column:1/4;}
-  #mix-guide{grid-column:1/3;}
-  #mixer-card{grid-column:3;}
+  /* Each column owns its own stack — no full-width rows that create gaps */
+  #multi-card  {grid-column:1;}
+  #step1-card  {grid-column:2;}
+  #step2-card  {grid-column:3;}
+  #step3-card  {grid-column:2;}   /* centre column: YouTube → Takes → Guide */
+  #mix-guide   {grid-column:2;}
+  #mixer-card  {grid-column:3;}   /* right column: Recording → Mixer */
 
   /* ── Multiplayer sidebar tweaks ── */
   /* Stack name label+input vertically so input gets full width */
