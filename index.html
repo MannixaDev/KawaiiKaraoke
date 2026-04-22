@@ -271,7 +271,7 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
         <button class="reverb-btn"        data-val="45" data-tip="Big stage energy ~ great for ballads and dramatic moments" onclick="pickReverb(this)">Stage &#127775;</button>
         <button class="reverb-btn"        data-val="70" data-tip="Dreamy and floaty ~ ethereal vibes for slower songs"      onclick="pickReverb(this)">Dreamy &#127744;</button>
         <button class="reverb-btn"        data-val="95" data-tip="Absolutely drenched ~ chaotic but iconic"                 onclick="pickReverb(this)">Wet af &#129397;</button>
-        <button class="reverb-btn"        data-val="robot" data-tip="Robotic ring-mod voice ~ T-Pain but make it kawaii"          onclick="pickReverb(this)">Robot &#129302;</button>
+        <button class="reverb-btn"        data-val="autotune" data-tip="Pitch-corrected autotune ~ T-Pain vibes, snaps to nearest note" onclick="pickReverb(this)">Autotune &#127925;</button>
       </div>
     </div>
     <div id="reverb-tip" style="font-size:0.7rem;font-weight:700;color:var(--ink-l);margin-bottom:0.4rem;min-height:1.1em;">Bone dry ~ no reverb at all, raw and close-up</div>
@@ -327,6 +327,11 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
       <span class="vol-label">&#127925; Backing</span>
       <input type="range" id="vol-backing" min="0" max="200" value="100" oninput="document.getElementById('vol-backing-val').textContent=this.value+'%'" />
       <span class="vol-val" id="vol-backing-val">100%</span>
+    </div>
+    <div class="vol-row">
+      <span class="vol-label" style="line-height:1.3">&#9202; Vocal offset<br><span style="font-weight:400;font-size:0.62rem;color:var(--ink-l)">if vocals start late, drag left</span></span>
+      <input type="range" id="vocal-offset" min="-5" max="5" step="0.1" value="0" oninput="document.getElementById('vocal-offset-val').textContent=(this.value>0?'+':'')+parseFloat(this.value).toFixed(1)+'s'" />
+      <span class="vol-val" id="vocal-offset-val">0.0s</span>
     </div>
     <div class="mix-btn-row">
       <button class="btn-lav" id="mix-btn" onclick="mixTracks()" disabled>&#10024; Mix &amp; Download &#10024;</button>
@@ -408,14 +413,16 @@ document.getElementById('yt-input').addEventListener('keydown',function(e){if(e.
 
 var CONVERTERS=[
   {name:'cobalt.tools',url:function(v){return'https://cobalt.tools/';}},
-  {name:'yt1s.com',url:function(v){return'https://yt1s.com/youtube-to-mp3?q='+encodeURIComponent(v);}},
-  {name:'y2mate',url:function(v){return'https://www.y2mate.com/youtube-mp3/';}},
-  {name:'loader.to',url:function(v){return'https://loader.to/en15/youtube-mp3-downloader.html?url='+encodeURIComponent(v);}},
+  {name:'yt5s.io',url:function(v){return'https://yt5s.io/en68/?q='+encodeURIComponent(v);}},
+  {name:'mp3youtube.cc',url:function(v){return'https://mp3youtube.cc/?url='+encodeURIComponent(v);}},
+  {name:'loader.to',url:function(v){return'https://loader.to/api/button/?url='+encodeURIComponent(v)+'&f=mp3';}},
 ];
 function updateGuide(ytUrl){var c=document.getElementById('converter-links');c.innerHTML='';CONVERTERS.forEach(function(cv){var a=document.createElement('a');a.href=cv.url(ytUrl);a.target='_blank';a.rel='noopener noreferrer';a.textContent=cv.name;c.appendChild(a);});document.getElementById('guide-url-note').textContent='Track: '+ytUrl;}
 
 // ── Mic + Reverb ──────────────────────────────────────────
-var audioCtx,analyser,recorder,reverbNode,dryGain,wetGain,ringOsc,ringGainNode,robotOutGain;
+var audioCtx,analyser,recorder,reverbNode,dryGain,wetGain;
+var autoProcNode,autotuneOutGain,pitchAnalyser;
+var autoRatio=1.0,autoWriteHead=0,autoReadHead=0,autoRingBuf=new Float32Array(8192);
 var chunks=[];
 
 async function initMic(){
@@ -438,12 +445,18 @@ async function initMic(){
     recorder=new MediaRecorder(dest.stream);
     recorder.ondataavailable=function(e){if(e.data.size>0)chunks.push(e.data);};
     recorder.onstop=finaliseTake;
-    ringOsc=audioCtx.createOscillator();ringOsc.type='sine';ringOsc.frequency.value=220;
-    ringGainNode=audioCtx.createGain();ringGainNode.gain.value=0;
-    robotOutGain=audioCtx.createGain();robotOutGain.gain.value=0;
-    ringOsc.connect(ringGainNode.gain);
-    micSource.connect(ringGainNode);ringGainNode.connect(robotOutGain);robotOutGain.connect(dest);
-    ringOsc.start();
+    pitchAnalyser=audioCtx.createAnalyser();pitchAnalyser.fftSize=1024;
+    micSource.connect(pitchAnalyser);
+    autoProcNode=audioCtx.createScriptProcessor(512,1,1);
+    autotuneOutGain=audioCtx.createGain();autotuneOutGain.gain.value=0;
+    micSource.connect(autoProcNode);
+    autoProcNode.onaudioprocess=function(ev){
+      var inp=ev.inputBuffer.getChannelData(0),out=ev.outputBuffer.getChannelData(0);
+      for(var i=0;i<inp.length;i++){autoRingBuf[autoWriteHead]=inp[i];autoWriteHead=(autoWriteHead+1)%autoRingBuf.length;}
+      for(var i=0;i<out.length;i++){out[i]=autoRingBuf[Math.floor(autoReadHead)%autoRingBuf.length];autoReadHead=(autoReadHead+autoRatio+autoRingBuf.length)%autoRingBuf.length;}
+    };
+    autoProcNode.connect(autotuneOutGain);autotuneOutGain.connect(dest);
+    setInterval(detectAndUpdatePitch,80);
     document.getElementById('rec-btn').disabled=false;
     setStatus('Mic ready~ Hit Record to start!','ok');
   }catch(e){setStatus('Could not access mic~ Check permissions!','err');}
@@ -461,14 +474,27 @@ function pickReverb(btn){
   document.querySelectorAll('.reverb-btn').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
   document.getElementById('reverb-tip').textContent=btn.dataset.tip;
-  if(btn.dataset.val==='robot'){
-    if(dryGain)dryGain.gain.value=0.05;
+  if(btn.dataset.val==='autotune'){
+    if(dryGain)dryGain.gain.value=0;
     if(wetGain)wetGain.gain.value=0;
-    if(robotOutGain)robotOutGain.gain.value=1;
+    if(autotuneOutGain)autotuneOutGain.gain.value=1;
   }else{
-    if(robotOutGain)robotOutGain.gain.value=0;
+    if(autotuneOutGain)autotuneOutGain.gain.value=0;
     setReverbWet(parseInt(btn.dataset.val));
   }
+}
+
+function detectAndUpdatePitch(){
+  if(!pitchAnalyser||!autotuneOutGain||autotuneOutGain.gain.value===0)return;
+  var buf=new Float32Array(1024);pitchAnalyser.getFloatTimeDomainData(buf);
+  var sr=audioCtx.sampleRate,best=-1,bestLag=40;
+  for(var lag=40;lag<500;lag++){var s=0;for(var i=0;i<buf.length-lag;i++)s+=buf[i]*buf[i+lag];if(s>best){best=s;bestLag=lag;}}
+  if(best<0.005)return;
+  var f=sr/bestLag;
+  if(f<80||f>1000)return;
+  var semitones=Math.round(12*Math.log2(f/440));
+  var target=440*Math.pow(2,semitones/12);
+  autoRatio=0.7*autoRatio+0.3*(target/f);
 }
 
 function runMeter(){
@@ -670,6 +696,7 @@ function checkMixReady(){var ready=vocalsBuffer&&backingBuffer;document.getEleme
 async function mixTracks(){
   if(!vocalsBuffer||!backingBuffer)return;
   var volV=document.getElementById('vol-vocals').value/100,volB=document.getElementById('vol-backing').value/100;
+  var offsetSecs=parseFloat(document.getElementById('vocal-offset').value)||0;
   var prog=document.getElementById('mix-progress'),bar=document.getElementById('mix-bar');
   prog.classList.add('show');bar.style.width='0%';setMixStatus('Mixing~','');
   document.getElementById('mix-btn').disabled=true;document.getElementById('mix-result').classList.remove('show');
@@ -677,11 +704,12 @@ async function mixTracks(){
   try{
     var c=getMixCtx(),sr=c.sampleRate;
     var numCh=Math.max(vocalsBuffer.numberOfChannels,backingBuffer.numberOfChannels);
-    var length=Math.max(vocalsBuffer.length,backingBuffer.length);
+    var vDelay=offsetSecs>0?offsetSecs:0,bDelay=offsetSecs<0?-offsetSecs:0;
+    var length=Math.max(vocalsBuffer.length+Math.round(vDelay*sr),backingBuffer.length+Math.round(bDelay*sr));
     bar.style.width='30%';await new Promise(function(r){setTimeout(r,30);});
     var offCtx=new OfflineAudioContext(numCh,length,sr);
-    var vSrc=offCtx.createBufferSource(),vGain=offCtx.createGain();vSrc.buffer=vocalsBuffer;vGain.gain.value=volV;vSrc.connect(vGain);vGain.connect(offCtx.destination);vSrc.start(0);
-    var bSrc=offCtx.createBufferSource(),bGain=offCtx.createGain();bSrc.buffer=backingBuffer;bGain.gain.value=volB;bSrc.connect(bGain);bGain.connect(offCtx.destination);bSrc.start(0);
+    var vSrc=offCtx.createBufferSource(),vGain=offCtx.createGain();vSrc.buffer=vocalsBuffer;vGain.gain.value=volV;vSrc.connect(vGain);vGain.connect(offCtx.destination);vSrc.start(vDelay);
+    var bSrc=offCtx.createBufferSource(),bGain=offCtx.createGain();bSrc.buffer=backingBuffer;bGain.gain.value=volB;bSrc.connect(bGain);bGain.connect(offCtx.destination);bSrc.start(bDelay);
     bar.style.width='60%';
     var rendered=await offCtx.startRendering();
     bar.style.width='85%';await new Promise(function(r){setTimeout(r,30);});
