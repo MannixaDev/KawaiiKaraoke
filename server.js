@@ -20,7 +20,7 @@ export default {
     const data = JSON.parse(message);
 
     // Relay WebRTC signalling + video sync to everyone else in the room
-    if (["offer", "answer", "ice", "sync-video"].includes(data.type)) {
+    if (["offer", "answer", "ice", "sync-video", "nick", "reaction"].includes(data.type)) {
       for (const peer of room.getConnections()) {
         if (peer !== ws) {
           peer.send(JSON.stringify({ ...data, from: ws.id }));
