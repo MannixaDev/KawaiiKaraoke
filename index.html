@@ -460,11 +460,13 @@ var ytFallbackIds=[],ytFallbackIdx=0;
 window.onYouTubeIframeAPIReady=function(){ytReady=true;if(pendingId)createPlayer(pendingId);};
 function createPlayer(id){
   if(ytPlayer){ytPlayer.loadVideoById(id);return;}
-  ytPlayer=new YT.Player('yt-player',{videoId:id,playerVars:{rel:0,modestbranding:1,playsinline:1,autoplay:1},events:{
+  ytPlayer=new YT.Player('yt-player',{videoId:id,playerVars:{rel:0,modestbranding:1,playsinline:1,autoplay:0},events:{
     onReady:function(e){e.target.loadVideoById(id);},
     onStateChange:function(e){
-      // Pause as soon as first frame appears (unless we're recording)
-      if(e.data===YT.PlayerState.PLAYING&&!isRecording)ytPlayer.pauseVideo();
+      // Let video play briefly so a real frame renders, then pause (unless recording)
+      if(e.data===YT.PlayerState.PLAYING&&!isRecording){
+        setTimeout(function(){if(!isRecording&&ytPlayer)ytPlayer.pauseVideo();},350);
+      }
     },
     onError:function(e){
       // 100=not found, 101/150=embedding disabled — try next fallback silently
