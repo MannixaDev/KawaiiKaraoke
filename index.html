@@ -142,6 +142,16 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
 /* Sync toast */
 #sync-toast{position:fixed;top:1.5rem;left:50%;transform:translateX(-50%) translateY(-80px);background:linear-gradient(135deg,var(--lavender),var(--pink));color:#fff;font-family:'Nunito',sans-serif;font-weight:800;font-size:0.85rem;padding:0.6rem 1.4rem;border-radius:50px;z-index:300;transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1),opacity 0.4s;opacity:0;pointer-events:none;box-shadow:0 4px 20px rgba(200,164,248,0.5);white-space:nowrap;}
 #sync-toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+/* Reactions */
+.reactions-panel{margin-top:0.75rem;display:none;}
+.reactions-panel.show{display:block;}
+.reactions-label{font-size:0.7rem;font-weight:800;color:var(--ink-l);margin-bottom:0.5rem;letter-spacing:0.1em;text-align:center;}
+.react-row{display:flex;gap:0.4rem;justify-content:center;}
+.react-btn{font-size:1.4rem;padding:0.45rem 0.65rem;background:var(--pink-bg);border:2px solid var(--pink-ll);border-radius:50px;cursor:pointer;transition:all 0.15s;line-height:1;font-family:'Nunito',sans-serif;}
+.react-btn:hover{transform:scale(1.25) translateY(-3px);background:var(--pink-ll);border-color:var(--pink);}
+.react-btn:active{transform:scale(0.9);}
+.rfloat{position:fixed;pointer-events:none;z-index:400;animation:rfloat 2.2s ease-out forwards;}
+@keyframes rfloat{0%{transform:translateY(0) scale(0.8);opacity:1}60%{opacity:1}100%{transform:translateY(-200px) scale(1.3);opacity:0}}
 </style>
 </head>
 <body>
@@ -162,6 +172,10 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
   <!-- Multiplayer -->
   <div class="card">
     <div class="card-title">&#127881; Multiplayer &#8212; Sing Together!</div>
+    <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem;">
+      <span style="font-size:0.72rem;font-weight:800;color:var(--ink-l);white-space:nowrap;">Your name</span>
+      <input type="text" id="local-nick" placeholder="Superstar~" maxlength="16" />
+    </div>
     <div class="room-mode-row">
       <button class="btn-pink" onclick="createRoom()">&#127968; Create Room</button>
       <button class="btn-lav" onclick="showJoin()">&#128279; Join Room</button>
@@ -174,8 +188,21 @@ input[type="range"]::-webkit-slider-thumb:hover{transform:scale(1.2);}
     </div>
     <div id="room-info" style="display:none">
       <div class="room-code" id="room-code-display" onclick="copyCode()" title="Click to copy"></div>
-      <div class="room-code-hint">&#128203; Click the code to copy &amp; share with friends!</div>
+      <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+        <button class="btn-ghost" onclick="copyCode()" style="flex:1;font-size:0.72rem;padding:0.5rem 0.8rem;">&#128203; Copy Code</button>
+        <button class="btn-lav" onclick="copyInvite()" style="flex:1;font-size:0.72rem;padding:0.5rem 0.8rem;">&#128279; Copy Invite Link</button>
+      </div>
       <div class="peers-list" id="peers-list"></div>
+      <div class="reactions-panel" id="reactions-panel">
+        <div class="reactions-label">&#127881; React while they sing!</div>
+        <div class="react-row">
+          <button class="react-btn" onclick="sendReaction('🔥')">&#128293;</button>
+          <button class="react-btn" onclick="sendReaction('❤️')">&#10084;&#65039;</button>
+          <button class="react-btn" onclick="sendReaction('👏')">&#128079;</button>
+          <button class="react-btn" onclick="sendReaction('🎤')">&#127908;</button>
+          <button class="react-btn" onclick="sendReaction('✨')">&#10024;</button>
+        </div>
+      </div>
     </div>
     <div id="room-status">Solo mode &#8212; create or join a room to sing together~ &#127800;</div>
   </div>
@@ -442,7 +469,7 @@ function setStatus(msg,type){var el=document.getElementById('rec-status');el.tex
 
 // ── Multiplayer ────────────────────────────────────────────
 var PARTYKIT_HOST='karaoke-server.arcmonitoring.partykit.dev';
-var socket=null,roomCode=null,isHost=false,peers={},localStream=null;
+var socket=null,roomCode=null,isHost=false,peers={},peerNicks={},localStream=null;
 
 function randCode(){return Math.random().toString(36).substring(2,6).toUpperCase();}
 function createRoom(){roomCode=randCode();isHost=true;connectToRoom(roomCode);}
@@ -457,8 +484,11 @@ async function connectToRoom(code){
   socket.onopen=function(){
     document.getElementById('room-info').style.display='block';
     document.getElementById('room-code-display').textContent=code;
+    document.getElementById('reactions-panel').classList.add('show');
     setRoomStatus(isHost?'Room created! Share the code~ \uD83C\uDF38':'Joined! \uD83C\uDF89','ok');
-    addPeerBubble('you','You \uD83D\uDC4B',true);
+    var myNick=document.getElementById('local-nick').value.trim()||'Superstar';
+    addPeerBubble('you',myNick+' \uD83D\uDC4B',true);
+    socket.send(JSON.stringify({type:'nick',name:myNick}));
   };
   socket.onmessage=async function(e){
     var msg=JSON.parse(e.data);
@@ -471,7 +501,11 @@ async function connectToRoom(code){
       setRoomStatus('Someone joined! \uD83C\uDF89','ok');
       if(isHost)await initiateOffer(msg.from);
       if(isHost&&currentYTUrl&&socket&&socket.readyState===1)socket.send(JSON.stringify({type:'sync-video',url:currentYTUrl}));
+      var myNick=document.getElementById('local-nick').value.trim()||'Superstar';
+      socket.send(JSON.stringify({type:'nick',name:myNick}));
     }
+    if(msg.type==='nick'){peerNicks[msg.from]=msg.name;updateBubbleNick(msg.from,msg.name);}
+    if(msg.type==='reaction')showReactionBurst(msg.emoji);
     if(msg.type==='peer-left'){removePeerBubble(msg.id);if(peers[msg.id]){peers[msg.id].pc.close();delete peers[msg.id];}setRoomStatus('Someone left the room~','');}
     if(msg.type==='sync-start'&&!isHost)startCountdown();
     if(msg.type==='sync-stop'&&!isHost&&isRecording)stopRec();
@@ -530,12 +564,17 @@ function monitorVoice(peerId,stream){
 
 function addPeerBubble(id,name,isYou){
   var list=document.getElementById('peers-list');if(document.getElementById('bubble-'+id))return;
+  var displayName=isYou?name:(peerNicks[id]||name);
   var b=document.createElement('div');b.className='peer-bubble';b.id='bubble-'+id;
-  b.innerHTML='<div class="peer-dot'+(isYou?' speaking':'')+'"></div>'+name;
+  b.innerHTML='<div class="peer-dot'+(isYou?' speaking':'')+'"></div>'+displayName;
   list.appendChild(b);
 }
+function updateBubbleNick(id,name){var b=document.getElementById('bubble-'+id);if(!b)return;var dot=b.querySelector('.peer-dot');b.innerHTML='';if(dot)b.appendChild(dot);b.appendChild(document.createTextNode(name));}
 function removePeerBubble(id){var b=document.getElementById('bubble-'+id);if(b)b.remove();}
 function copyCode(){navigator.clipboard.writeText(roomCode).then(function(){setRoomStatus('Code copied! Share with friends~','ok');});}
+function copyInvite(){var url=location.origin+location.pathname+'?room='+roomCode;navigator.clipboard.writeText(url).then(function(){setRoomStatus('Invite link copied! Share it~ \uD83C\uDF38','ok');});}
+function sendReaction(emoji){if(socket&&socket.readyState===1)socket.send(JSON.stringify({type:'reaction',emoji:emoji}));showReactionBurst(emoji);}
+function showReactionBurst(emoji){for(var i=0;i<4;i++)(function(d){setTimeout(function(){var el=document.createElement('div');el.className='rfloat';el.textContent=emoji;el.style.left=(15+Math.random()*70)+'vw';el.style.bottom=(10+Math.random()*20)+'vh';el.style.fontSize=(1.6+Math.random()*1.4)+'rem';document.body.appendChild(el);setTimeout(function(){el.remove();},2500);},d*180);})(i);}
 function setRoomStatus(msg,type){var el=document.getElementById('room-status');el.textContent=msg;el.className=type||'';}
 
 var _toastTimer;
@@ -593,6 +632,7 @@ function audioBufferToWav(buffer){
 }
 
 initMic();
+(function(){var p=new URLSearchParams(location.search).get('room');if(p){var c=p.toUpperCase().substring(0,4);document.getElementById('join-code').value=c;document.getElementById('join-row').style.display='block';setTimeout(function(){joinRoom();},400);}})();
 </script>
 </body>
 </html>
